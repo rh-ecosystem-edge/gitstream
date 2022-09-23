@@ -17,6 +17,7 @@ jobs:
 
     steps:
       - name: Generate image metadata
+        id: meta
         uses: docker/metadata-action@v4
         with:
           images: ghcr.io/qbarrand/gitstream
@@ -42,5 +43,5 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ steps.meta-operator.outputs.tags }}
-          labels: ${{ steps.meta-operator.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
