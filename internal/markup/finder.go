@@ -7,6 +7,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
+//go:generate mockgen -source=finder.go -package=markup -destination=mock_finder.go
+
 type Finder interface {
 	FindSHAs(string) ([]plumbing.Hash, error)
 }

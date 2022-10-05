@@ -1,6 +1,7 @@
 package internal
 
 const (
-	AppName        = "gitstream"
-	GitStreamLabel = "gitstream"
+	AppName         = "gitstream"
+	GitStreamLabel  = "gitstream"
+	GitStreamPrefix = "gs-"
 )

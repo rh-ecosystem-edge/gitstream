@@ -9,14 +9,15 @@ type ProcessError struct {
 	ReturnCode *int
 }
 
-type Repository struct {
-	Name RepoName
-	URL  string
+type BaseData struct {
+	AppName     string
+	Commit      Commit
+	UpstreamURL string
 }
 
 type IssueData struct {
-	AppName  string
-	Commit   Commit
-	Error    ProcessError
-	Upstream Repository
+	BaseData
+	Error ProcessError
 }
+
+type PRData BaseData
