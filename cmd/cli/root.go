@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-logr/logr"
@@ -57,6 +58,7 @@ func (a *App) GetCLIApp() *cli.App {
 
 	app.Before = func(context *cli.Context) error {
 		stdr.SetVerbosity(logLevel)
+		a.Logger.Info("Build information", "commit", getGitCommit())
 		return nil
 	}
 
@@ -186,4 +188,19 @@ func (a *App) sync(c *cli.Context) error {
 	}
 
 	return s.Run(ctx)
+}
+
+func getGitCommit() string {
+	commit := ""
+
+	bi, ok := debug.ReadBuildInfo()
+	if ok {
+		for _, s := range bi.Settings {
+			if s.Key == "vcs.revision" {
+				commit = s.Value
+			}
+		}
+	}
+
+	return commit
 }
