@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-logr/logr"
 	"github.com/qbarrand/gitstream/internal"
 	gh "github.com/qbarrand/gitstream/internal/github"
@@ -128,25 +127,21 @@ func (s *Sync) Run(ctx context.Context) error {
 			continue
 		}
 
-		po := git.PushOptions{
-			Auth:  &http.BasicAuth{Username: s.Repo.Token},
-			Force: true,
-		}
-
 		if s.DryRun {
 			logger.Info("Dry run: skipping push")
-		} else {
-			if err := s.Repo.PushContext(ctx, &po); err != nil {
-				return fmt.Errorf("error while pushing branch %s: %v", branchName, err)
-			}
-
-			pr, err := s.Creator.CreatePR(ctx, s.DownstreamRepoName, branchName, mainBranch, s.UpstreamURL, c)
-			if err != nil {
-				return fmt.Errorf("could not create PR: %v", err)
-			}
-
-			logger.Info("Created PR", "url", pr.HTMLURL)
+			continue
 		}
+
+		if err := s.Repo.PushContextWithAuth(ctx); err != nil {
+			return fmt.Errorf("error while pushing branch %s: %v", branchName, err)
+		}
+
+		pr, err := s.Creator.CreatePR(ctx, s.DownstreamRepoName, branchName, mainBranch, s.UpstreamURL, c)
+		if err != nil {
+			return fmt.Errorf("could not create PR: %v", err)
+		}
+
+		logger.Info("Created PR", "url", pr.HTMLURL)
 	}
 
 	return nil

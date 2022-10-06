@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-logr/logr"
 )
 
@@ -14,15 +15,23 @@ type RepoWrapper struct {
 	*git.Repository
 
 	logger logr.Logger
+	path   string
+	token  string
+}
 
-	Path  string
-	Token string
+func NewRepoWrapper(repo *git.Repository, logger logr.Logger, path, token string) *RepoWrapper {
+	return &RepoWrapper{
+		Repository: repo,
+		logger:     logger,
+		path:       path,
+		token:      token,
+	}
 }
 
 func (rw *RepoWrapper) CherryPick(ctx context.Context, commit *object.Commit) ([]byte, error) {
 	sha := commit.Hash.String()
 
-	cmdShow := newCommand(ctx, rw.Path, "show", sha)
+	cmdShow := newCommand(ctx, rw.path, "show", sha)
 
 	stdOut, err := cmdShow.StdoutPipe()
 	if err != nil {
@@ -32,20 +41,20 @@ func (rw *RepoWrapper) CherryPick(ctx context.Context, commit *object.Commit) ([
 	rw.logger.WithValues(
 		"Running git show",
 		"command", cmdShow.String(),
-		"dir", rw.Path,
+		"dir", rw.path,
 	)
 
 	if err := cmdShow.Start(); err != nil {
 		return nil, fmt.Errorf("could not start git show: %v", err)
 	}
 
-	cmdApply := newCommand(ctx, rw.Path, "apply", "--allow-empty", "-")
+	cmdApply := newCommand(ctx, rw.path, "apply", "--allow-empty", "-")
 	cmdApply.Stdin = stdOut
 
 	rw.logger.WithValues(
 		"Running git apply",
 		"command", cmdApply.String(),
-		"dir", rw.Path,
+		"dir", rw.path,
 	)
 
 	out, err := cmdApply.CombinedOutput()
@@ -74,6 +83,15 @@ func (rw *RepoWrapper) CherryPick(ctx context.Context, commit *object.Commit) ([
 	}
 
 	return out, nil
+}
+
+func (rw *RepoWrapper) PushContextWithAuth(ctx context.Context) error {
+	po := git.PushOptions{
+		Auth:  &http.BasicAuth{Username: rw.token},
+		Force: true,
+	}
+
+	return rw.PushContext(ctx, &po)
 }
 
 func newCommand(ctx context.Context, dir string, args ...string) *exec.Cmd {

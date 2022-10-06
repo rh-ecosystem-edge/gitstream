@@ -179,14 +179,10 @@ func (a *App) sync(c *cli.Context) error {
 		DownstreamRepoName:      repoName,
 		GitHelper:               gitutils.NewHelper(a.Logger),
 		Logger:                  a.Logger,
-		Repo: &gitutils.RepoWrapper{
-			Repository: repo,
-			Path:       repoPath,
-			Token:      token,
-		},
-		UpstreamRef:   c.String("upstream-ref"),
-		UpstreamSince: c.Timestamp("since"),
-		UpstreamURL:   c.String("upstream-url"),
+		Repo:                    gitutils.NewRepoWrapper(repo, a.Logger, repoPath, token),
+		UpstreamRef:             c.String("upstream-ref"),
+		UpstreamSince:           c.Timestamp("since"),
+		UpstreamURL:             c.String("upstream-url"),
 	}
 
 	return s.Run(ctx)
