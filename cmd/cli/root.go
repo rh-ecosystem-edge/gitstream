@@ -26,7 +26,7 @@ func (a *App) GetCLIApp() *cli.App {
 	var (
 		flagSince = &cli.TimestampFlag{
 			Name:   "since",
-			Layout: "2006-02-01",
+			Layout: "2006-01-02",
 			Usage:  "only look at upstream commits on or after that date (YYYY-MM-DD)",
 		}
 		flagDsRepoName = &cli.StringFlag{
