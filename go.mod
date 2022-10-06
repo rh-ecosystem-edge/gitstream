@@ -3,7 +3,6 @@ module github.com/qbarrand/gitstream
 go 1.19
 
 require (
-	github.com/creasty/defaults v1.6.0
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/stdr v1.2.2
@@ -11,9 +10,8 @@ require (
 	github.com/google/go-github/v47 v47.1.0
 	github.com/migueleliasweb/go-github-mock v0.0.12
 	github.com/stretchr/testify v1.8.0
-	github.com/urfave/cli/v2 v2.16.3
+	github.com/urfave/cli/v2 v2.17.1
 	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -44,4 +42,5 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
