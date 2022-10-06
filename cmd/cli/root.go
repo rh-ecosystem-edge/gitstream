@@ -86,6 +86,10 @@ func (a *App) GetCLIApp() *cli.App {
 			Name:   "sync",
 			Action: a.sync,
 			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "dry-run",
+					Usage: "if true, no code is pushed and no content is created through the API",
+				},
 				flagSince,
 				flagDsRepoName,
 				flagDsRepoPath,
@@ -170,6 +174,7 @@ func (a *App) sync(c *cli.Context) error {
 	s := gitstream.Sync{
 		Creator:                 gh.NewCreator(gc),
 		Differ:                  gitutils.NewDiffer(a.Logger),
+		DryRun:                  c.Bool("dry-run"),
 		DownstreamIntentsGetter: gitutils.NewDownstreamIntentsGetter(a.Logger, a.IntentsGetter, gc),
 		DownstreamRepoName:      repoName,
 		GitHelper:               gitutils.NewHelper(a.Logger),
