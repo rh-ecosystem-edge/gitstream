@@ -24,10 +24,6 @@ func ParseRepoName(s string) (*RepoName, error) {
 	return &RepoName{Owner: items[0], Repo: items[1]}, nil
 }
 
-func (r RepoName) String() string {
-	return fmt.Sprintf("%s/%s", r.Owner, r.Repo)
-}
-
 type Client struct {
 	gc *github.Client
 }
@@ -40,8 +36,4 @@ func NewGitHubClient(ctx context.Context, token string) *github.Client {
 	tc := oauth2.NewClient(ctx, ts)
 
 	return github.NewClient(tc)
-}
-
-func (c *Client) GitHubClient() *github.Client {
-	return c.gc
 }

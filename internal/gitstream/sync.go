@@ -4,68 +4,62 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
-	"time"
+	"sort"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-logr/logr"
 	"github.com/qbarrand/gitstream/internal"
+	"github.com/qbarrand/gitstream/internal/config"
 	gh "github.com/qbarrand/gitstream/internal/github"
 	"github.com/qbarrand/gitstream/internal/gitutils"
+	"github.com/qbarrand/gitstream/internal/process"
 )
 
 type Sync struct {
-	Creator                 gh.Creator
-	Differ                  gitutils.Differ
-	DryRun                  bool
-	DownstreamIntentsGetter gitutils.DownstreamIntentsGetter
-	Repo                    *gitutils.RepoWrapper
-	DownstreamRepoName      *gh.RepoName
-	GitHelper               gitutils.Helper
-	Logger                  logr.Logger
-	UpstreamSince           *time.Time
-	UpstreamRef             string
-	UpstreamURL             string
+	CherryPicker     gitutils.CherryPicker
+	Creator          gh.Creator
+	Differ           gitutils.Differ
+	DiffConfig       config.Diff
+	DryRun           bool
+	GitHelper        gitutils.Helper
+	GitHubToken      string
+	Repo             *git.Repository
+	RepoName         *gh.RepoName
+	DownstreamConfig config.Downstream
+	Logger           logr.Logger
+	UpstreamConfig   config.Upstream
 }
 
-const mainBranch = "main"
-
 func (s *Sync) Run(ctx context.Context) error {
-	downstreamIntents, err := s.DownstreamIntentsGetter.GetIntents(ctx, s.Repo.Repository, s.UpstreamSince, s.DownstreamRepoName)
-	if err != nil {
-		return fmt.Errorf("could not get downstream commit intents: %v", err)
-	}
-
-	if err := prepareRemote(ctx, s.Repo.Repository, s.UpstreamURL, s.GitHelper); err != nil {
-		return fmt.Errorf("could not prepare the remote pointing to upstream: %v", err)
-	}
-
-	ref, err := getRefFromRemote(s.Repo.Repository, upstreamRemoteName, s.UpstreamRef)
-	if err != nil {
-		return fmt.Errorf("could not get the reference for %s/%s: %v", upstreamRemoteName, s.UpstreamRef, err)
-	}
-
-	diff, err := s.Differ.GetMissingCommits(ctx, s.Repo.Repository, ref, s.UpstreamSince, downstreamIntents)
+	commits, err := s.Differ.GetMissingCommits(ctx, s.Repo, s.RepoName, s.DiffConfig.CommitsSince, s.UpstreamConfig)
 	if err != nil {
 		return fmt.Errorf("could not get commits not present in downstream: %v", err)
 	}
 
-	wt, err := s.Repo.Repository.Worktree()
+	sort.Slice(commits, func(i, j int) bool {
+		return commits[i].Committer.When.Before(commits[j].Committer.When)
+	})
+
+	wt, err := s.Repo.Worktree()
 	if err != nil {
 		return fmt.Errorf("could not get the worktree: %v", err)
 	}
 
 	mainCheckoutOptions := git.CheckoutOptions{
-		Branch: plumbing.NewBranchReferenceName(mainBranch),
+		Branch: plumbing.NewBranchReferenceName(s.DownstreamConfig.MainBranch),
 		Force:  true,
 	}
 
-	for h, c := range diff {
-		logger := s.Logger.WithValues("sha", h)
+	for _, c := range commits {
+		sha := c.Hash.String()
+
+		logger := s.Logger.WithValues("sha", sha)
+
 		logger.Info("Cherry-picking commit")
 
-		logger.Info("Checking out main branch", "name", mainBranch)
+		logger.Info("Checking out main branch", "name", s.DownstreamConfig.MainBranch)
 
 		if err := wt.Checkout(&mainCheckoutOptions); err != nil {
 			return fmt.Errorf("could not checkout the main branch: %v", err)
@@ -75,7 +69,7 @@ func (s *Sync) Run(ctx context.Context) error {
 			return fmt.Errorf("could not reset: %v", err)
 		}
 
-		branchName := internal.GitStreamPrefix + h.String()
+		branchName := internal.GitStreamPrefix + sha
 
 		logger.Info("Switching to branch", "name", branchName)
 
@@ -95,54 +89,51 @@ func (s *Sync) Run(ctx context.Context) error {
 			return fmt.Errorf("could not checkout branch %s: %v", branchName, err)
 		}
 
-		out, err := s.Repo.CherryPick(ctx, c)
-		if err != nil {
-			logger.Info("Could not cherry-pick; creating issue", "output", string(out))
+		logger.Info("Running cherry-pick")
 
-			exitErr := &exec.ExitError{}
-			var exitCode *int
-
-			if errors.As(err, &exitErr) {
-				code := exitErr.ExitCode()
-				exitCode = &code
-			}
-
-			logger.Error(err, "Error while cherry-picking; creating issue")
-
-			pe := gh.ProcessError{
-				Output:     string(out),
-				ReturnCode: exitCode,
-			}
-
+		if err := s.cherryPickAndPush(ctx, c, branchName, logger); err != nil {
 			if s.DryRun {
 				logger.Info("Dry run: skipping issue creation")
-			} else {
-				if issue, err := s.Creator.CreateIssue(ctx, &pe, s.DownstreamRepoName, s.UpstreamURL, c); err != nil {
-					logger.Error(err, "could not create issue for commit")
-				} else {
-					logger.Info("Created issue", "url", *issue.HTMLURL)
-				}
+				continue
 			}
 
-			continue
+			if issue, err := s.Creator.CreateIssue(ctx, err, s.UpstreamConfig.URL, c); err != nil {
+				logger.Error(err, "could not create issue for commit")
+			} else {
+				logger.Info("Created issue", "url", *issue.HTMLURL)
+			}
 		}
-
-		if s.DryRun {
-			logger.Info("Dry run: skipping push")
-			continue
-		}
-
-		if err := s.Repo.PushContextWithAuth(ctx); err != nil {
-			return fmt.Errorf("error while pushing branch %s: %v", branchName, err)
-		}
-
-		pr, err := s.Creator.CreatePR(ctx, s.DownstreamRepoName, branchName, mainBranch, s.UpstreamURL, c)
-		if err != nil {
-			return fmt.Errorf("could not create PR: %v", err)
-		}
-
-		logger.Info("Created PR", "url", pr.HTMLURL)
 	}
+
+	return nil
+}
+
+func (s *Sync) cherryPickAndPush(ctx context.Context, commit *object.Commit, branchName string, logger logr.Logger) error {
+	if err := s.CherryPicker.Run(ctx, s.Repo, s.DownstreamConfig.LocalRepoPath, commit); err != nil {
+		pe := &process.Error{}
+
+		if errors.As(err, &pe) {
+			logger.Info("Output", "combined", pe.Combined())
+		}
+
+		return fmt.Errorf("could not cherry-pick: %w", err)
+	}
+
+	if s.DryRun {
+		logger.Info("Dry run: skipping push")
+		return nil
+	}
+
+	if err := s.GitHelper.PushContextWithAuth(ctx, s.GitHubToken); err != nil {
+		return fmt.Errorf("error while pushing branch %s: %v", branchName, err)
+	}
+
+	pr, err := s.Creator.CreatePR(ctx, branchName, s.DownstreamConfig.MainBranch, s.UpstreamConfig.URL, commit)
+	if err != nil {
+		return fmt.Errorf("could not create PR: %v", err)
+	}
+
+	logger.Info("Created PR", "url", pr.HTMLURL)
 
 	return nil
 }

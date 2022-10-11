@@ -21,23 +21,30 @@ var (
 	)
 )
 
+//go:generate mockgen -source=creator.go -package=github -destination=mock_creator.go
+
 type Creator interface {
-	CreateIssue(ctx context.Context, gitErr *ProcessError, downstreamRepo *RepoName, upstreamURL string, commit *object.Commit) (*github.Issue, error)
-	CreatePR(ctx context.Context, repoName *RepoName, branch, base, upstreamURL string, commit *object.Commit) (*github.PullRequest, error)
+	CreateIssue(ctx context.Context, err error, upstreamURL string, commit *object.Commit) (*github.Issue, error)
+	CreatePR(ctx context.Context, branch, base, upstreamURL string, commit *object.Commit) (*github.PullRequest, error)
 }
 
 type CreatorImpl struct {
-	gc *github.Client
+	gc       *github.Client
+	markup   string
+	repoName *RepoName
 }
 
-func NewCreator(gc *github.Client) *CreatorImpl {
-	return &CreatorImpl{gc: gc}
+func NewCreator(gc *github.Client, markup string, repoName *RepoName) *CreatorImpl {
+	return &CreatorImpl{
+		gc:       gc,
+		markup:   markup,
+		repoName: repoName,
+	}
 }
 
 func (c *CreatorImpl) CreateIssue(
 	ctx context.Context,
-	gitErr *ProcessError,
-	downstreamRepo *RepoName,
+	err error,
 	upstreamURL string,
 	commit *object.Commit,
 ) (*github.Issue, error) {
@@ -47,14 +54,15 @@ func (c *CreatorImpl) CreateIssue(
 		BaseData: BaseData{
 			AppName:     internal.AppName,
 			Commit:      Commit{SHA: sha},
+			Markup:      c.markup,
 			UpstreamURL: upstreamURL,
 		},
-		Error: *gitErr,
+		Error: err,
 	}
 
 	var buf bytes.Buffer
 
-	if err := templates.ExecuteTemplate(&buf, "issue.tmpl", data); err != nil {
+	if err := templates.ExecuteTemplate(&buf, "issue.tmpl", &data); err != nil {
 		return nil, fmt.Errorf("could not execute issue template: %v", err)
 	}
 
@@ -68,7 +76,7 @@ func (c *CreatorImpl) CreateIssue(
 		Labels: &[]string{internal.GitStreamLabel},
 	}
 
-	issue, _, err := c.gc.Issues.Create(ctx, downstreamRepo.Owner, downstreamRepo.Repo, &req)
+	issue, _, err := c.gc.Issues.Create(ctx, c.repoName.Owner, c.repoName.Repo, &req)
 	if err != nil {
 		return nil, fmt.Errorf("could not create the issue: %v", err)
 	}
@@ -76,12 +84,13 @@ func (c *CreatorImpl) CreateIssue(
 	return issue, err
 }
 
-func (c *CreatorImpl) CreatePR(ctx context.Context, repoName *RepoName, branch, base, upstreamURL string, commit *object.Commit) (*github.PullRequest, error) {
+func (c *CreatorImpl) CreatePR(ctx context.Context, branch, base, upstreamURL string, commit *object.Commit) (*github.PullRequest, error) {
 	sha := commit.Hash.String()
 
 	data := PRData{
 		AppName:     internal.AppName,
 		Commit:      Commit{SHA: sha},
+		Markup:      c.markup,
 		UpstreamURL: upstreamURL,
 	}
 
@@ -102,12 +111,12 @@ func (c *CreatorImpl) CreatePR(ctx context.Context, repoName *RepoName, branch, 
 		Base: github.String(base),
 	}
 
-	pr, _, err := c.gc.PullRequests.Create(ctx, repoName.Owner, repoName.Repo, &req)
+	pr, _, err := c.gc.PullRequests.Create(ctx, c.repoName.Owner, c.repoName.Repo, &req)
 	if err != nil {
 		return nil, fmt.Errorf("could not create the pull request: %v", err)
 	}
 
-	_, _, err = c.gc.Issues.AddLabelsToIssue(ctx, repoName.Owner, repoName.Repo, *pr.Number, []string{internal.GitStreamLabel})
+	_, _, err = c.gc.Issues.AddLabelsToIssue(ctx, c.repoName.Owner, c.repoName.Repo, *pr.Number, []string{internal.GitStreamLabel})
 	if err != nil {
 		return nil, fmt.Errorf("could not label PR: %v", err)
 	}

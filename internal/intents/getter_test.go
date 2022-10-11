@@ -10,14 +10,14 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-github/v47/github"
 	"github.com/migueleliasweb/go-github-mock/src/mock"
-	github2 "github.com/qbarrand/gitstream/internal/github"
+	gh "github.com/qbarrand/gitstream/internal/github"
 	"github.com/qbarrand/gitstream/internal/intents"
 	"github.com/qbarrand/gitstream/internal/markup"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewIntentsGetter(t *testing.T) {
-	ig := intents.NewIntentsGetter(nil, logr.Discard())
+	ig := intents.NewIntentsGetter(nil, nil, logr.Discard())
 
 	assert.NotNil(t, ig)
 }
@@ -34,9 +34,9 @@ func TestGetterImpl_FromGitHubIssues(t *testing.T) {
 		)
 
 		c := github.NewClient(mockedHTTPClient)
-		ig := intents.NewIntentsGetter(nil, logr.Discard())
+		ig := intents.NewIntentsGetter(nil, c, logr.Discard())
 
-		_, err := ig.FromGitHubIssues(context.Background(), c, &github2.RepoName{})
+		_, err := ig.FromGitHubIssues(context.Background(), &gh.RepoName{})
 		assert.Error(t, err)
 	})
 
@@ -49,7 +49,7 @@ func TestGetterImpl_FromGitHubIssues(t *testing.T) {
 			msg1      = "Message 1"
 		)
 
-		repoName := github2.RepoName{Owner: "owner", Repo: "repo"}
+		repoName := gh.RepoName{Owner: "owner", Repo: "repo"}
 
 		mockedHTTPClient := mock.NewMockedHTTPClient(
 			mock.WithRequestMatch(
@@ -85,7 +85,7 @@ func TestGetterImpl_FromGitHubIssues(t *testing.T) {
 			finder.EXPECT().FindSHAs(msg1).Return([]plumbing.Hash{hash}, nil),
 		)
 
-		ci, err := intents.NewIntentsGetter(finder, logr.Discard()).FromGitHubIssues(context.Background(), c, &repoName)
+		ci, err := intents.NewIntentsGetter(finder, c, logr.Discard()).FromGitHubIssues(context.Background(), &repoName)
 		assert.NoError(t, err)
 		assert.Equal(t, intents.CommitIntents{hash: issueURL1}, ci)
 
@@ -104,9 +104,9 @@ func TestGetterImpl_FromGitHubOpenPRs(t *testing.T) {
 		)
 
 		c := github.NewClient(mockedHTTPClient)
-		ig := intents.NewIntentsGetter(nil, logr.Discard())
+		ig := intents.NewIntentsGetter(nil, c, logr.Discard())
 
-		_, err := ig.FromGitHubOpenPRs(context.Background(), c, &github2.RepoName{})
+		_, err := ig.FromGitHubOpenPRs(context.Background(), &gh.RepoName{})
 		assert.Error(t, err)
 	})
 
@@ -153,9 +153,9 @@ func TestGetterImpl_FromGitHubOpenPRs(t *testing.T) {
 			finder.EXPECT().FindSHAs(msg1).Return([]plumbing.Hash{hash}, nil),
 		)
 
-		repoName := &github2.RepoName{Owner: "owner", Repo: "repo"}
+		repoName := &gh.RepoName{Owner: "owner", Repo: "repo"}
 
-		ci, err := intents.NewIntentsGetter(finder, logr.Discard()).FromGitHubOpenPRs(context.Background(), c, repoName)
+		ci, err := intents.NewIntentsGetter(finder, c, logr.Discard()).FromGitHubOpenPRs(context.Background(), repoName)
 		assert.NoError(t, err)
 		assert.Equal(t, intents.CommitIntents{hash: issueURL1}, ci)
 	})

@@ -2,48 +2,80 @@ package gitutils
 
 import (
 	"context"
-	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
-	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/go-logr/logr"
+	"github.com/golang/mock/gomock"
+	"github.com/qbarrand/gitstream/internal/config"
+	gh "github.com/qbarrand/gitstream/internal/github"
 	"github.com/qbarrand/gitstream/internal/intents"
+	"github.com/qbarrand/gitstream/internal/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDifferImpl_GetMissingCommits(t *testing.T) {
-	_, filename, _, _ := runtime.Caller(0)
-	projectRoot := filepath.Join(filepath.Dir(filename), "..", "..")
+	repo := test.CloneCurrentRepo(t)
 
-	t.Logf("Opening the git repository in %s", projectRoot)
+	ctrl := gomock.NewController(t)
 
-	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{URL: projectRoot})
-	require.NoError(t, err)
+	helper := NewMockHelper(ctrl)
+	ig := intents.NewMockGetter(ctrl)
 
-	di := NewDiffer(logr.Discard())
+	di := NewDiffer(helper, ig, logr.Discard())
+
+	since := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	repoName := gh.RepoName{
+		Owner: "owner",
+		Repo:  "repo",
+	}
+
+	const (
+		branchName = "main"
+		remoteName = "gs-upstream"
+		remoteURL  = "remote-url"
+	)
+
+	upstreamConfig := config.Upstream{
+		Ref: branchName,
+		URL: remoteURL,
+	}
+
+	ctx := context.Background()
 
 	head, err := repo.Head()
 	require.NoError(t, err)
 
-	since := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
+	// First 3 commits of this repo
+	logHash := plumbing.NewHash("e3229f3c533ed51070beff092e5c7694a8ee81f0")
+	issueHash := plumbing.NewHash("9c08d42326af62aa0f8cea021c4d37971606148f")
+	prHash := plumbing.NewHash("4159d2e86cc72a321de2ac0585952ddd5aa95039")
 
-	hash1 := plumbing.NewHash("d36f7b79606934161431b255dd22158f5b903579")
-	hash2 := plumbing.NewHash("4159d2e86cc72a321de2ac0585952ddd5aa95039")
+	gomock.InOrder(
+		ig.EXPECT().FromLocalGitRepo(ctx, repo, &since).Return(intents.CommitIntents{logHash: "commit from log"}, nil),
+		ig.EXPECT().FromGitHubIssues(ctx, &repoName).Return(intents.CommitIntents{issueHash: "commit from issue"}, nil),
+		ig.EXPECT().FromGitHubOpenPRs(ctx, &repoName).Return(intents.CommitIntents{prHash: "commit from PR"}, nil),
+		helper.EXPECT().RecreateRemote(ctx, remoteName, remoteURL),
+		helper.EXPECT().GetRemoteRef(ctx, remoteName, branchName).Return(head, nil),
+	)
 
-	ci := intents.CommitIntents{
-		hash1: "some-commit",
-		hash2: "some-commit",
-	}
-
-	hs, err := di.GetMissingCommits(context.Background(), repo, head, &since, ci)
+	commits, err := di.GetMissingCommits(context.Background(), repo, &repoName, &since, upstreamConfig)
 	assert.NoError(t, err)
 
-	assert.NotEmpty(t, hs)
-	assert.NotContains(t, hs, hash1)
-	assert.NotContains(t, hs, hash2)
+	assert.NotEmpty(t, commits)
+
+	// make a set for faster lookups
+	set := make(map[plumbing.Hash]struct{})
+
+	for _, c := range commits {
+		set[c.Hash] = struct{}{}
+	}
+
+	assert.Contains(t, set, plumbing.NewHash("d36f7b79606934161431b255dd22158f5b903579")) // 4th commit of this repo
+	assert.NotContains(t, set, logHash)
+	assert.NotContains(t, set, issueHash)
+	assert.NotContains(t, set, prHash)
 }

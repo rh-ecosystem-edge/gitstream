@@ -4,18 +4,26 @@ Please cherry-pick the commit manually.
 
 ---
 
-{{- if .Error.ReturnCode }}
-**Return code:** {{ .Error.ReturnCode }}
-{{- end }}
+**Error**:
+```
+{{ .Error.Error }}
+```
+
+{{- with $pe := .ProcessError }}
+---
+
+**Command**: `{{ $pe.Command }}`
 
 <details><summary>Output</summary>
 
 ```
-{{ .Error.Output }}
+{{ printf "%s" $pe.Combined }}
 ```
 
 </details>
+{{- end }}
+
 
 ---
 
-Upstream-Commit: {{ .Commit.SHA }}
+{{ .Markup }}: {{ .Commit.SHA }}
