@@ -38,6 +38,8 @@ func (a *App) GetCLIApp() *cli.App {
 			return fmt.Errorf("could not read config: %v", err)
 		}
 
+		a.Config = cfg
+
 		logLevel := cfg.LogLevel
 
 		if c.IsSet(logLevelFlagName) {
