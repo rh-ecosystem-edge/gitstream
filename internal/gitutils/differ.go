@@ -6,40 +6,74 @@ import (
 	"time"
 
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-logr/logr"
+	"github.com/qbarrand/gitstream/internal"
+	"github.com/qbarrand/gitstream/internal/config"
+	gh "github.com/qbarrand/gitstream/internal/github"
 	"github.com/qbarrand/gitstream/internal/intents"
 )
 
-type HashSet map[plumbing.Hash]*object.Commit
+const upstreamRemoteName = internal.GitStreamPrefix + "upstream"
 
-type RepoWithRef struct {
-	repo       *git.Repository
-	remoteName string
-	refName    string
-}
+//go:generate mockgen -source=differ.go -package=gitutils -destination=mock_differ.go
 
 type Differ interface {
-	GetMissingCommits(ctx context.Context, repo *git.Repository, froms *plumbing.Reference, since *time.Time, intents intents.CommitIntents) (HashSet, error)
+	GetMissingCommits(ctx context.Context, repo *git.Repository, repoName *gh.RepoName, since *time.Time, upstreamConfig config.Upstream) ([]*object.Commit, error)
 }
 
 type DifferImpl struct {
-	logger logr.Logger
+	helper        Helper
+	intentsGetter intents.Getter
+	logger        logr.Logger
 }
 
-func NewDiffer(logger logr.Logger) *DifferImpl {
-	return &DifferImpl{logger: logger}
+func NewDiffer(helper Helper, ig intents.Getter, logger logr.Logger) *DifferImpl {
+	return &DifferImpl{
+		helper:        helper,
+		intentsGetter: ig,
+		logger:        logger,
+	}
 }
 
 func (d *DifferImpl) GetMissingCommits(
 	ctx context.Context,
 	repo *git.Repository,
-	from *plumbing.Reference,
+	repoName *gh.RepoName,
 	since *time.Time,
-	intents intents.CommitIntents,
-) (HashSet, error) {
-	set := make(HashSet)
+	upstreamConfig config.Upstream,
+) ([]*object.Commit, error) {
+	logIntents, err := d.intentsGetter.FromLocalGitRepo(ctx, repo, since)
+	if err != nil {
+		return nil, fmt.Errorf("could not get hashes from commits: %v", err)
+	}
+
+	issueIntents, err := d.intentsGetter.FromGitHubIssues(ctx, repoName)
+	if err != nil {
+		return nil, fmt.Errorf("could not get hashes from issues: %v", err)
+	}
+
+	prIntents, err := d.intentsGetter.FromGitHubOpenPRs(ctx, repoName)
+	if err != nil {
+		return nil, fmt.Errorf("could not get hashes from PRs: %v", err)
+	}
+
+	downstreamIntents := intents.MergeCommitIntents(
+		logIntents,
+		issueIntents,
+		prIntents,
+	)
+
+	if _, err = d.helper.RecreateRemote(ctx, upstreamRemoteName, upstreamConfig.URL); err != nil {
+		return nil, fmt.Errorf("could not recreate remote: %v", err)
+	}
+
+	from, err := d.helper.GetRemoteRef(ctx, upstreamRemoteName, upstreamConfig.Ref)
+	if err != nil {
+		return nil, fmt.Errorf("could not get the ref for %s/%s: %v", upstreamRemoteName, upstreamConfig.Ref, err)
+	}
+
+	commits := make([]*object.Commit, 0)
 
 	lo := git.LogOptions{
 		From: from.Hash(),
@@ -61,16 +95,16 @@ func (d *DifferImpl) GetMissingCommits(
 
 		hash := commit.Hash
 
-		origin, ok := intents[hash]
+		origin, ok := downstreamIntents[hash]
 		if ok {
 			d.logger.Info("Upstream commit found in downstream", "SHA", hash, "origin", origin)
 		} else {
 			d.logger.Info("Upstream commit not in downstream", "SHA", hash)
-			set[hash] = commit
+			commits = append(commits, commit)
 		}
 
 		return nil
 	})
 
-	return set, err
+	return commits, err
 }

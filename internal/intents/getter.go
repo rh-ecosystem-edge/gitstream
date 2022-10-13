@@ -35,28 +35,31 @@ func MergeCommitIntents(cis ...CommitIntents) CommitIntents {
 	return res
 }
 
+//go:generate mockgen -source=getter.go -package=intents -destination=mock_getter.go
+
 type Getter interface {
-	FromGitHubOpenPRs(ctx context.Context, gc *github.Client, rn *gh.RepoName) (CommitIntents, error)
-	FromGitHubIssues(ctx context.Context, gc *github.Client, rn *gh.RepoName) (CommitIntents, error)
+	FromGitHubOpenPRs(ctx context.Context, rn *gh.RepoName) (CommitIntents, error)
+	FromGitHubIssues(ctx context.Context, rn *gh.RepoName) (CommitIntents, error)
 	FromLocalGitRepo(ctx context.Context, repo *git.Repository, since *time.Time) (CommitIntents, error)
 }
 
 type GetterImpl struct {
 	finder markup.Finder
+	gc     *github.Client
 	logger logr.Logger
 }
 
-func NewIntentsGetter(finder markup.Finder, logger logr.Logger) *GetterImpl {
-	return &GetterImpl{finder: finder, logger: logger}
+func NewIntentsGetter(finder markup.Finder, gc *github.Client, logger logr.Logger) *GetterImpl {
+	return &GetterImpl{finder: finder, gc: gc, logger: logger}
 }
 
-func (g *GetterImpl) FromGitHubOpenPRs(ctx context.Context, gc *github.Client, rn *gh.RepoName) (CommitIntents, error) {
+func (g *GetterImpl) FromGitHubOpenPRs(ctx context.Context, rn *gh.RepoName) (CommitIntents, error) {
 	intents := make(CommitIntents)
 
 	opt := &github.PullRequestListOptions{State: "open"}
 
 	for {
-		prs, resp, err := gc.PullRequests.List(ctx, rn.Owner, rn.Repo, opt)
+		prs, resp, err := g.gc.PullRequests.List(ctx, rn.Owner, rn.Repo, opt)
 		if err != nil {
 			return nil, fmt.Errorf("error while listing PRs: %v", err)
 		}
@@ -93,7 +96,7 @@ func (g *GetterImpl) FromGitHubOpenPRs(ctx context.Context, gc *github.Client, r
 	return intents, nil
 }
 
-func (g *GetterImpl) FromGitHubIssues(ctx context.Context, gc *github.Client, rn *gh.RepoName) (CommitIntents, error) {
+func (g *GetterImpl) FromGitHubIssues(ctx context.Context, rn *gh.RepoName) (CommitIntents, error) {
 	intents := make(CommitIntents)
 
 	opt := &github.IssueListByRepoOptions{
@@ -102,7 +105,7 @@ func (g *GetterImpl) FromGitHubIssues(ctx context.Context, gc *github.Client, rn
 	}
 
 	for {
-		issues, resp, err := gc.Issues.ListByRepo(ctx, rn.Owner, rn.Repo, opt)
+		issues, resp, err := g.gc.Issues.ListByRepo(ctx, rn.Owner, rn.Repo, opt)
 		if err != nil {
 			return nil, fmt.Errorf("error while listing issues: %v", err)
 		}

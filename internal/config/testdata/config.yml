@@ -1,0 +1,20 @@
+commit_markup: test
+
+downstream:
+  github_repo_name: owner/repo
+  local_repo_path: some-path
+  main_branch: some-branch
+
+log_level: 1000
+
+diff:
+  commits_since: 2022-12-01
+
+sync:
+  before_commit:
+    - [command, one]
+    - [command, two]
+
+upstream:
+  ref: some-ref
+  url: https://url.to.some/git/repo

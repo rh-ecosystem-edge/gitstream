@@ -9,6 +9,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
+	"github.com/qbarrand/gitstream/internal/config"
 	gh "github.com/qbarrand/gitstream/internal/github"
 	"github.com/qbarrand/gitstream/internal/gitstream"
 	"github.com/qbarrand/gitstream/internal/gitutils"
@@ -18,55 +19,43 @@ import (
 )
 
 type App struct {
-	Finder        markup.Finder
-	IntentsGetter intents.Getter
-	Logger        logr.Logger
+	Config *config.Config
+	Logger logr.Logger
 }
 
 func (a *App) GetCLIApp() *cli.App {
-	var (
-		flagSince = &cli.TimestampFlag{
-			Name:   "since",
-			Layout: "2006-01-02",
-			Usage:  "only look at upstream commits on or after that date (YYYY-MM-DD)",
-		}
-		flagDsRepoName = &cli.StringFlag{
-			Name:  "downstream-repo-name",
-			Usage: "owner/repo",
-		}
-		flagDsRepoPath = &cli.StringFlag{
-			Name:  "downstream-repo-path",
-			Value: ".",
-			Usage: "path to the local copy of the downstream repo",
-		}
-		flagUpstreamRef = &cli.StringFlag{
-			Name:  "upstream-ref",
-			Value: "main",
-			Usage: "name of the upstream branch we want to read commits from",
-		}
-		flagUpstreamURL = &cli.StringFlag{
-			Name:     "upstream-url",
-			Required: true,
-			Usage:    "Git URL of the upstream repository",
-		}
-		logLevel int
-	)
+	const logLevelFlagName = "log-level"
+
+	var configPath string
 
 	app := cli.NewApp()
 
 	app.Action = cli.ShowAppHelp
 
-	app.Before = func(context *cli.Context) error {
+	app.Before = func(c *cli.Context) error {
+		cfg, err := config.ReadConfigFile(configPath)
+		if err != nil {
+			return fmt.Errorf("could not read config: %v", err)
+		}
+
+		logLevel := cfg.LogLevel
+
+		if c.IsSet(logLevelFlagName) {
+			logLevel = c.Int(logLevelFlagName)
+		}
+
 		stdr.SetVerbosity(logLevel)
 		a.Logger.Info("Build information", "commit", getGitCommit())
 		return nil
 	}
 
 	app.Flags = []cli.Flag{
-		&cli.IntFlag{
-			Name:        "log-level",
-			Destination: &logLevel,
+		&cli.StringFlag{
+			Name:        "config",
+			Value:       ".github/gitstream.yml",
+			Destination: &configPath,
 		},
+		&cli.IntFlag{Name: "log-level"},
 	}
 
 	app.Usage = "Synchronization tool between an upstream and a downstream repository on GitHub"
@@ -75,14 +64,7 @@ func (a *App) GetCLIApp() *cli.App {
 		{
 			Name:   "diff",
 			Action: a.diff,
-			Flags: []cli.Flag{
-				flagSince,
-				flagDsRepoName,
-				flagDsRepoPath,
-				flagUpstreamRef,
-				flagUpstreamURL,
-			},
-			Usage: "List upstream commits and try to find them downstream",
+			Usage:  "List upstream commits and try to find them downstream",
 		},
 		{
 			Name:   "sync",
@@ -92,11 +74,6 @@ func (a *App) GetCLIApp() *cli.App {
 					Name:  "dry-run",
 					Usage: "if true, no code is pushed and no content is created through the API",
 				},
-				flagSince,
-				flagDsRepoName,
-				flagDsRepoPath,
-				flagUpstreamRef,
-				flagUpstreamURL,
 			},
 			Usage: "Try to apply missing upstream commits to the downstream repository",
 		},
@@ -124,27 +101,33 @@ func (a *App) diff(c *cli.Context) error {
 
 	gc := gh.NewGitHubClient(ctx, token)
 
-	rawRepoName := c.String("downstream-repo-name")
-	repoName, err := gh.ParseRepoName(rawRepoName)
+	repoName, err := gh.ParseRepoName(a.Config.Downstream.GitHubRepoName)
 	if err != nil {
-		return fmt.Errorf("%q: invalid repository name", rawRepoName)
+		return fmt.Errorf("%q: invalid repository name", a.Config.Downstream.GitHubRepoName)
 	}
 
-	repo, err := git.PlainOpenWithOptions(c.String("downstream-repo-path"), &git.PlainOpenOptions{})
+	repo, err := git.PlainOpenWithOptions(a.Config.Downstream.LocalRepoPath, &git.PlainOpenOptions{})
 	if err != nil {
 		return fmt.Errorf("could not open the downstream repo: %v", err)
 	}
 
+	finder, err := markup.NewFinder(a.Config.CommitMarkup)
+	if err != nil {
+		return fmt.Errorf("could not create the markup finder: %v", err)
+	}
+
 	d := gitstream.Diff{
-		Differ:                  gitutils.NewDiffer(a.Logger),
-		DownstreamIntentsGetter: gitutils.NewDownstreamIntentsGetter(a.Logger, a.IntentsGetter, gc),
-		Repo:                    repo,
-		DownstreamRepoName:      repoName,
-		GitHelper:               gitutils.NewHelper(a.Logger),
-		Logger:                  a.Logger,
-		UpstreamRef:             c.String("upstream-ref"),
-		UpstreamSince:           c.Timestamp("since"),
-		UpstreamURL:             c.String("upstream-url"),
+		Differ: gitutils.NewDiffer(
+			gitutils.NewHelper(repo, a.Logger),
+			intents.NewIntentsGetter(finder, gc, a.Logger),
+			a.Logger,
+		),
+		DiffConfig: a.Config.Diff,
+
+		Logger:         a.Logger,
+		RepoName:       repoName,
+		Repo:           repo,
+		UpstreamConfig: a.Config.Upstream,
 	}
 
 	return d.Run(ctx)
@@ -160,47 +143,56 @@ func (a *App) sync(c *cli.Context) error {
 
 	gc := gh.NewGitHubClient(ctx, token)
 
-	rawRepoName := c.String("downstream-repo-name")
-	repoName, err := gh.ParseRepoName(rawRepoName)
+	repoName, err := gh.ParseRepoName(a.Config.Downstream.GitHubRepoName)
 	if err != nil {
-		return fmt.Errorf("%q: invalid repository name", rawRepoName)
+		return fmt.Errorf("%q: invalid repository name", a.Config.Downstream.GitHubRepoName)
 	}
 
-	repoPath := c.String("downstream-repo-path")
+	repoPath := a.Config.Downstream.LocalRepoPath
 
 	repo, err := git.PlainOpenWithOptions(repoPath, &git.PlainOpenOptions{})
 	if err != nil {
 		return fmt.Errorf("could not open the downstream repo: %v", err)
 	}
 
+	helper := gitutils.NewHelper(repo, a.Logger)
+
+	finder, err := markup.NewFinder(a.Config.CommitMarkup)
+	if err != nil {
+		return fmt.Errorf("could not create the markup finder: %v", err)
+	}
+
 	s := gitstream.Sync{
-		Creator:                 gh.NewCreator(gc),
-		Differ:                  gitutils.NewDiffer(a.Logger),
-		DryRun:                  c.Bool("dry-run"),
-		DownstreamIntentsGetter: gitutils.NewDownstreamIntentsGetter(a.Logger, a.IntentsGetter, gc),
-		DownstreamRepoName:      repoName,
-		GitHelper:               gitutils.NewHelper(a.Logger),
-		Logger:                  a.Logger,
-		Repo:                    gitutils.NewRepoWrapper(repo, a.Logger, repoPath, token),
-		UpstreamRef:             c.String("upstream-ref"),
-		UpstreamSince:           c.Timestamp("since"),
-		UpstreamURL:             c.String("upstream-url"),
+		CherryPicker: gitutils.NewCherryPicker(a.Config.CommitMarkup, a.Logger, a.Config.Sync.BeforeCommit...),
+		Creator:      gh.NewCreator(gc, a.Config.CommitMarkup, repoName),
+		Differ: gitutils.NewDiffer(
+			helper,
+			intents.NewIntentsGetter(finder, gc, a.Logger),
+			a.Logger,
+		),
+		DiffConfig:       a.Config.Diff,
+		DownstreamConfig: a.Config.Downstream,
+		DryRun:           c.Bool("dry-run"),
+		GitHelper:        helper,
+		GitHubToken:      token,
+		Logger:           a.Logger,
+		Repo:             repo,
+		RepoName:         repoName,
+		UpstreamConfig:   a.Config.Upstream,
 	}
 
 	return s.Run(ctx)
 }
 
 func getGitCommit() string {
-	commit := ""
-
 	bi, ok := debug.ReadBuildInfo()
 	if ok {
 		for _, s := range bi.Settings {
 			if s.Key == "vcs.revision" {
-				commit = s.Value
+				return s.Value
 			}
 		}
 	}
 
-	return commit
+	return ""
 }
