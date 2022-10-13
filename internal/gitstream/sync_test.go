@@ -77,7 +77,6 @@ func TestSync_Run(t *testing.T) {
 	const (
 		sha1    = "e3229f3c533ed51070beff092e5c7694a8ee81f0"
 		sha2    = "9c08d42326af62aa0f8cea021c4d37971606148f"
-		branch1 = "gs-" + sha1
 		branch2 = "gs-" + sha2
 	)
 

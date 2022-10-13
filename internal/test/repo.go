@@ -10,10 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var co = git.CloneOptions{
+	URL:           "../..",
+	ReferenceName: "refs/heads/main",
+}
+
 func CloneCurrentRepo(t *testing.T) *git.Repository {
 	t.Helper()
 
-	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{URL: "../.."})
+	repo, err := git.Clone(memory.NewStorage(), nil, &co)
 	require.NoError(t, err)
 
 	return repo
@@ -24,7 +29,7 @@ func CloneCurrentRepoWithFS(t *testing.T) (*git.Repository, billy.Filesystem) {
 
 	wt := memfs.New()
 
-	repo, err := git.Clone(memory.NewStorage(), wt, &git.CloneOptions{URL: "../.."})
+	repo, err := git.Clone(memory.NewStorage(), wt, &co)
 	require.NoError(t, err)
 
 	return repo, wt
