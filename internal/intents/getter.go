@@ -40,7 +40,7 @@ func MergeCommitIntents(cis ...CommitIntents) CommitIntents {
 type Getter interface {
 	FromGitHubOpenPRs(ctx context.Context, rn *gh.RepoName) (CommitIntents, error)
 	FromGitHubIssues(ctx context.Context, rn *gh.RepoName) (CommitIntents, error)
-	FromLocalGitRepo(ctx context.Context, repo *git.Repository, since *time.Time) (CommitIntents, error)
+	FromLocalGitRepo(ctx context.Context, repo *git.Repository, from plumbing.Hash, since *time.Time) (CommitIntents, error)
 }
 
 type GetterImpl struct {
@@ -142,8 +142,13 @@ func (g *GetterImpl) FromGitHubIssues(ctx context.Context, rn *gh.RepoName) (Com
 	return intents, nil
 }
 
-func (g *GetterImpl) FromLocalGitRepo(ctx context.Context, repo *git.Repository, since *time.Time) (CommitIntents, error) {
-	iter, err := repo.Log(&git.LogOptions{Since: since})
+func (g *GetterImpl) FromLocalGitRepo(ctx context.Context, repo *git.Repository, from plumbing.Hash, since *time.Time) (CommitIntents, error) {
+	lo := git.LogOptions{
+		From:  from,
+		Since: since,
+	}
+
+	iter, err := repo.Log(&lo)
 	if err != nil {
 		return nil, fmt.Errorf("could not get an iterator on the downstream repo: %v", err)
 	}

@@ -36,6 +36,21 @@ func (m *MockHelper) EXPECT() *MockHelperMockRecorder {
 	return m.recorder
 }
 
+// GetBranchRef mocks base method.
+func (m *MockHelper) GetBranchRef(ctx context.Context, branchName string) (*plumbing.Reference, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBranchRef", ctx, branchName)
+	ret0, _ := ret[0].(*plumbing.Reference)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBranchRef indicates an expected call of GetBranchRef.
+func (mr *MockHelperMockRecorder) GetBranchRef(ctx, branchName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBranchRef", reflect.TypeOf((*MockHelper)(nil).GetBranchRef), ctx, branchName)
+}
+
 // GetRemoteRef mocks base method.
 func (m *MockHelper) GetRemoteRef(ctx context.Context, remoteName, branchName string) (*plumbing.Reference, error) {
 	m.ctrl.T.Helper()

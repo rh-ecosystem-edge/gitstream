@@ -99,7 +99,7 @@ func TestSync_Run(t *testing.T) {
 	gomock.InOrder(
 		mockDiffer.
 			EXPECT().
-			GetMissingCommits(ctx, repo, &ghRepoName, &since, upstreamConfig).
+			GetMissingCommits(ctx, repo, &ghRepoName, &since, downstreamMainBranch, upstreamConfig).
 			Return([]*object.Commit{commit1, commit2}, nil),
 		mockCP.EXPECT().Run(ctx, repo, repoPath, commit2),
 		mockHelper.EXPECT().PushContextWithAuth(ctx, githubToken),

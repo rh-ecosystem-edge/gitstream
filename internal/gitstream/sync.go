@@ -22,18 +22,25 @@ type Sync struct {
 	Creator          gh.Creator
 	Differ           gitutils.Differ
 	DiffConfig       config.Diff
+	DownstreamConfig config.Downstream
 	DryRun           bool
 	GitHelper        gitutils.Helper
 	GitHubToken      string
+	Logger           logr.Logger
 	Repo             *git.Repository
 	RepoName         *gh.RepoName
-	DownstreamConfig config.Downstream
-	Logger           logr.Logger
 	UpstreamConfig   config.Upstream
 }
 
 func (s *Sync) Run(ctx context.Context) error {
-	commits, err := s.Differ.GetMissingCommits(ctx, s.Repo, s.RepoName, s.DiffConfig.CommitsSince, s.UpstreamConfig)
+	commits, err := s.Differ.GetMissingCommits(
+		ctx,
+		s.Repo,
+		s.RepoName,
+		s.DiffConfig.CommitsSince,
+		s.DownstreamConfig.MainBranch,
+		s.UpstreamConfig,
+	)
 	if err != nil {
 		return fmt.Errorf("could not get commits not present in downstream: %v", err)
 	}
@@ -53,6 +60,12 @@ func (s *Sync) Run(ctx context.Context) error {
 	}
 
 	for _, c := range commits {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		sha := c.Hash.String()
 
 		logger := s.Logger.WithValues("sha", sha)
@@ -113,7 +126,7 @@ func (s *Sync) cherryPickAndPush(ctx context.Context, commit *object.Commit, bra
 		pe := &process.Error{}
 
 		if errors.As(err, &pe) {
-			logger.Info("Output", "combined", pe.Combined())
+			logger.Info("Output", "combined", pe.CombinedString())
 		}
 
 		return fmt.Errorf("could not cherry-pick: %w", err)

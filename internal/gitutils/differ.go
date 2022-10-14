@@ -19,7 +19,7 @@ const upstreamRemoteName = internal.GitStreamPrefix + "upstream"
 //go:generate mockgen -source=differ.go -package=gitutils -destination=mock_differ.go
 
 type Differ interface {
-	GetMissingCommits(ctx context.Context, repo *git.Repository, repoName *gh.RepoName, since *time.Time, upstreamConfig config.Upstream) ([]*object.Commit, error)
+	GetMissingCommits(ctx context.Context, repo *git.Repository, repoName *gh.RepoName, since *time.Time, dsMainBranch string, upstreamConfig config.Upstream) ([]*object.Commit, error)
 }
 
 type DifferImpl struct {
@@ -41,9 +41,15 @@ func (d *DifferImpl) GetMissingCommits(
 	repo *git.Repository,
 	repoName *gh.RepoName,
 	since *time.Time,
-	upstreamConfig config.Upstream,
+	dsMainBranch string,
+	usCfg config.Upstream,
 ) ([]*object.Commit, error) {
-	logIntents, err := d.intentsGetter.FromLocalGitRepo(ctx, repo, since)
+	dsFrom, err := d.helper.GetBranchRef(ctx, dsMainBranch)
+	if err != nil {
+		return nil, fmt.Errorf("could not get the tip of branch %q: %v", dsMainBranch, err)
+	}
+
+	logIntents, err := d.intentsGetter.FromLocalGitRepo(ctx, repo, dsFrom.Hash(), since)
 	if err != nil {
 		return nil, fmt.Errorf("could not get hashes from commits: %v", err)
 	}
@@ -64,13 +70,13 @@ func (d *DifferImpl) GetMissingCommits(
 		prIntents,
 	)
 
-	if _, err = d.helper.RecreateRemote(ctx, upstreamRemoteName, upstreamConfig.URL); err != nil {
+	if _, err = d.helper.RecreateRemote(ctx, upstreamRemoteName, usCfg.URL); err != nil {
 		return nil, fmt.Errorf("could not recreate remote: %v", err)
 	}
 
-	from, err := d.helper.GetRemoteRef(ctx, upstreamRemoteName, upstreamConfig.Ref)
+	from, err := d.helper.GetRemoteRef(ctx, upstreamRemoteName, usCfg.Ref)
 	if err != nil {
-		return nil, fmt.Errorf("could not get the ref for %s/%s: %v", upstreamRemoteName, upstreamConfig.Ref, err)
+		return nil, fmt.Errorf("could not get the ref for %s/%s: %v", upstreamRemoteName, usCfg.Ref, err)
 	}
 
 	commits := make([]*object.Commit, 0)

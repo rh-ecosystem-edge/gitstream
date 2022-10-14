@@ -22,6 +22,10 @@ func (pe *Error) Combined() []byte {
 	return pe.combined
 }
 
+func (pe *Error) CombinedString() string {
+	return string(pe.combined)
+}
+
 func (pe *Error) Command() string {
 	return pe.command
 }

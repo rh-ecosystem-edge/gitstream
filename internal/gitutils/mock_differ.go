@@ -40,16 +40,16 @@ func (m *MockDiffer) EXPECT() *MockDifferMockRecorder {
 }
 
 // GetMissingCommits mocks base method.
-func (m *MockDiffer) GetMissingCommits(ctx context.Context, repo *git.Repository, repoName *github.RepoName, since *time.Time, upstreamConfig config.Upstream) ([]*object.Commit, error) {
+func (m *MockDiffer) GetMissingCommits(ctx context.Context, repo *git.Repository, repoName *github.RepoName, since *time.Time, dsMainBranch string, upstreamConfig config.Upstream) ([]*object.Commit, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMissingCommits", ctx, repo, repoName, since, upstreamConfig)
+	ret := m.ctrl.Call(m, "GetMissingCommits", ctx, repo, repoName, since, dsMainBranch, upstreamConfig)
 	ret0, _ := ret[0].([]*object.Commit)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetMissingCommits indicates an expected call of GetMissingCommits.
-func (mr *MockDifferMockRecorder) GetMissingCommits(ctx, repo, repoName, since, upstreamConfig interface{}) *gomock.Call {
+func (mr *MockDifferMockRecorder) GetMissingCommits(ctx, repo, repoName, since, dsMainBranch, upstreamConfig interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMissingCommits", reflect.TypeOf((*MockDiffer)(nil).GetMissingCommits), ctx, repo, repoName, since, upstreamConfig)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMissingCommits", reflect.TypeOf((*MockDiffer)(nil).GetMissingCommits), ctx, repo, repoName, since, dsMainBranch, upstreamConfig)
 }

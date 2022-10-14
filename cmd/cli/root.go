@@ -28,9 +28,20 @@ func (a *App) GetCLIApp() *cli.App {
 
 	var configPath string
 
+	commit := getGitCommit()
+
 	app := cli.NewApp()
 
 	app.Action = cli.ShowAppHelp
+
+	app.Authors = []*cli.Author{
+		{
+			Name:  "Quentin Barrand",
+			Email: "quba@redhat.com",
+		},
+	}
+
+	app.Version = "0.0.1-" + commit
 
 	app.Before = func(c *cli.Context) error {
 		cfg, err := config.ReadConfigFile(configPath)
@@ -47,7 +58,7 @@ func (a *App) GetCLIApp() *cli.App {
 		}
 
 		stdr.SetVerbosity(logLevel)
-		a.Logger.Info("Build information", "commit", getGitCommit())
+		a.Logger.Info("Build information", "commit", commit)
 		return nil
 	}
 
@@ -124,12 +135,12 @@ func (a *App) diff(c *cli.Context) error {
 			intents.NewIntentsGetter(finder, gc, a.Logger),
 			a.Logger,
 		),
-		DiffConfig: a.Config.Diff,
-
-		Logger:         a.Logger,
-		RepoName:       repoName,
-		Repo:           repo,
-		UpstreamConfig: a.Config.Upstream,
+		DiffConfig:           a.Config.Diff,
+		DownstreamMainBranch: a.Config.Downstream.MainBranch,
+		Logger:               a.Logger,
+		RepoName:             repoName,
+		Repo:                 repo,
+		UpstreamConfig:       a.Config.Upstream,
 	}
 
 	return d.Run(ctx)

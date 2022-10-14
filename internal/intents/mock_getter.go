@@ -10,6 +10,7 @@ import (
 	time "time"
 
 	v5 "github.com/go-git/go-git/v5"
+	plumbing "github.com/go-git/go-git/v5/plumbing"
 	gomock "github.com/golang/mock/gomock"
 	github "github.com/qbarrand/gitstream/internal/github"
 )
@@ -68,16 +69,16 @@ func (mr *MockGetterMockRecorder) FromGitHubOpenPRs(ctx, rn interface{}) *gomock
 }
 
 // FromLocalGitRepo mocks base method.
-func (m *MockGetter) FromLocalGitRepo(ctx context.Context, repo *v5.Repository, since *time.Time) (CommitIntents, error) {
+func (m *MockGetter) FromLocalGitRepo(ctx context.Context, repo *v5.Repository, from plumbing.Hash, since *time.Time) (CommitIntents, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FromLocalGitRepo", ctx, repo, since)
+	ret := m.ctrl.Call(m, "FromLocalGitRepo", ctx, repo, from, since)
 	ret0, _ := ret[0].(CommitIntents)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // FromLocalGitRepo indicates an expected call of FromLocalGitRepo.
-func (mr *MockGetterMockRecorder) FromLocalGitRepo(ctx, repo, since interface{}) *gomock.Call {
+func (mr *MockGetterMockRecorder) FromLocalGitRepo(ctx, repo, from, since interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromLocalGitRepo", reflect.TypeOf((*MockGetter)(nil).FromLocalGitRepo), ctx, repo, since)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromLocalGitRepo", reflect.TypeOf((*MockGetter)(nil).FromLocalGitRepo), ctx, repo, from, since)
 }

@@ -15,6 +15,7 @@ import (
 //go:generate mockgen -source=helper.go -package=gitutils -destination=mock_helper.go
 
 type Helper interface {
+	GetBranchRef(ctx context.Context, branchName string) (*plumbing.Reference, error)
 	GetRemoteRef(ctx context.Context, remoteName, branchName string) (*plumbing.Reference, error)
 	PushContextWithAuth(ctx context.Context, token string) error
 	RecreateRemote(ctx context.Context, remoteNAme, remoteURL string) (*git.Remote, error)
@@ -27,6 +28,10 @@ type HelperImpl struct {
 
 func NewHelper(repo *git.Repository, logger logr.Logger) Helper {
 	return &HelperImpl{repo: repo, logger: logger}
+}
+
+func (h *HelperImpl) GetBranchRef(ctx context.Context, branchName string) (*plumbing.Reference, error) {
+	return h.repo.Reference(plumbing.NewBranchReferenceName(branchName), true)
 }
 
 func (h *HelperImpl) GetRemoteRef(ctx context.Context, remoteName, branchName string) (*plumbing.Reference, error) {

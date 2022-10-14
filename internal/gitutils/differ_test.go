@@ -34,12 +34,13 @@ func TestDifferImpl_GetMissingCommits(t *testing.T) {
 	}
 
 	const (
-		branchName = "main"
-		remoteName = "gs-upstream"
-		remoteURL  = "remote-url"
+		branchName   = "main"
+		dsMainBranch = "ds-main"
+		remoteName   = "gs-upstream"
+		remoteURL    = "remote-url"
 	)
 
-	upstreamConfig := config.Upstream{
+	usCfg := config.Upstream{
 		Ref: branchName,
 		URL: remoteURL,
 	}
@@ -54,15 +55,20 @@ func TestDifferImpl_GetMissingCommits(t *testing.T) {
 	issueHash := plumbing.NewHash("9c08d42326af62aa0f8cea021c4d37971606148f")
 	prHash := plumbing.NewHash("4159d2e86cc72a321de2ac0585952ddd5aa95039")
 
+	// random hash
+	dsMainHash := plumbing.NewHash("2cbad39aaf3854c020d2b969df3f795f5ba109ba")
+	dsMainRef := plumbing.NewHashReference(plumbing.NewBranchReferenceName(dsMainBranch), dsMainHash)
+
 	gomock.InOrder(
-		ig.EXPECT().FromLocalGitRepo(ctx, repo, &since).Return(intents.CommitIntents{logHash: "commit from log"}, nil),
+		helper.EXPECT().GetBranchRef(ctx, dsMainBranch).Return(dsMainRef, nil),
+		ig.EXPECT().FromLocalGitRepo(ctx, repo, dsMainHash, &since).Return(intents.CommitIntents{logHash: "commit from log"}, nil),
 		ig.EXPECT().FromGitHubIssues(ctx, &repoName).Return(intents.CommitIntents{issueHash: "commit from issue"}, nil),
 		ig.EXPECT().FromGitHubOpenPRs(ctx, &repoName).Return(intents.CommitIntents{prHash: "commit from PR"}, nil),
 		helper.EXPECT().RecreateRemote(ctx, remoteName, remoteURL),
 		helper.EXPECT().GetRemoteRef(ctx, remoteName, branchName).Return(head, nil),
 	)
 
-	commits, err := di.GetMissingCommits(context.Background(), repo, &repoName, &since, upstreamConfig)
+	commits, err := di.GetMissingCommits(context.Background(), repo, &repoName, &since, dsMainBranch, usCfg)
 	assert.NoError(t, err)
 
 	assert.NotEmpty(t, commits)
