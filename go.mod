@@ -10,7 +10,7 @@ require (
 	github.com/go-logr/stdr v1.2.2
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v47 v47.1.0
-	github.com/migueleliasweb/go-github-mock v0.0.12
+	github.com/migueleliasweb/go-github-mock v0.0.13
 	github.com/stretchr/testify v1.8.0
 	github.com/urfave/cli/v2 v2.20.2
 	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1
