@@ -98,7 +98,7 @@ func (e *ExecutorImpl) RunCommand(ctx context.Context, logger logr.Logger, bin, 
 		return fmt.Errorf("error while running %q: %v", cmd, err)
 	}
 
-	logger.V(1).Info("Process exited normally", "output", cmdOut)
+	logger.V(1).Info("Process exited normally", "output", string(cmdOut))
 
 	return nil
 }

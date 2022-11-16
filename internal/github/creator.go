@@ -25,7 +25,7 @@ var (
 
 type Creator interface {
 	CreateIssue(ctx context.Context, err error, upstreamURL string, commit *object.Commit) (*github.Issue, error)
-	CreatePR(ctx context.Context, branch, base, upstreamURL string, commit *object.Commit) (*github.PullRequest, error)
+	CreatePR(ctx context.Context, branch, base, upstreamURL string, commit *object.Commit, draft bool) (*github.PullRequest, error)
 }
 
 type CreatorImpl struct {
@@ -84,7 +84,7 @@ func (c *CreatorImpl) CreateIssue(
 	return issue, err
 }
 
-func (c *CreatorImpl) CreatePR(ctx context.Context, branch, base, upstreamURL string, commit *object.Commit) (*github.PullRequest, error) {
+func (c *CreatorImpl) CreatePR(ctx context.Context, branch, base, upstreamURL string, commit *object.Commit, draft bool) (*github.PullRequest, error) {
 	sha := commit.Hash.String()
 
 	data := PRData{
@@ -107,8 +107,9 @@ func (c *CreatorImpl) CreatePR(ctx context.Context, branch, base, upstreamURL st
 		Body: github.String(
 			buf.String(),
 		),
-		Head: github.String(branch),
-		Base: github.String(base),
+		Head:  github.String(branch),
+		Base:  github.String(base),
+		Draft: &draft,
 	}
 
 	pr, _, err := c.gc.PullRequests.Create(ctx, c.repoName.Owner, c.repoName.Repo, &req)

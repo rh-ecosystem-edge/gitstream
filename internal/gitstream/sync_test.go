@@ -23,6 +23,7 @@ func TestSync_Run(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	const (
+		createDraftPRs       = true
 		downstreamMainBranch = "main"
 		dryRun               = false
 		githubToken          = "github-token"
@@ -67,8 +68,9 @@ func TestSync_Run(t *testing.T) {
 		Repo:        repo,
 		RepoName:    &ghRepoName,
 		DownstreamConfig: config.Downstream{
-			LocalRepoPath: repoPath,
-			MainBranch:    downstreamMainBranch,
+			CreateDraftPRs: createDraftPRs,
+			LocalRepoPath:  repoPath,
+			MainBranch:     downstreamMainBranch,
 		},
 		Logger:         logger,
 		UpstreamConfig: upstreamConfig,
@@ -105,7 +107,7 @@ func TestSync_Run(t *testing.T) {
 		mockHelper.EXPECT().PushContextWithAuth(ctx, githubToken),
 		mockCreator.
 			EXPECT().
-			CreatePR(ctx, branch2, downstreamMainBranch, upstreamURL, commit2).
+			CreatePR(ctx, branch2, downstreamMainBranch, upstreamURL, commit2, createDraftPRs).
 			Return(&github.PullRequest{HTMLURL: github.String("some-string")}, nil),
 		mockCP.
 			EXPECT().

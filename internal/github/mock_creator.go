@@ -52,16 +52,16 @@ func (mr *MockCreatorMockRecorder) CreateIssue(ctx, err, upstreamURL, commit int
 }
 
 // CreatePR mocks base method.
-func (m *MockCreator) CreatePR(ctx context.Context, branch, base, upstreamURL string, commit *object.Commit) (*github.PullRequest, error) {
+func (m *MockCreator) CreatePR(ctx context.Context, branch, base, upstreamURL string, commit *object.Commit, draft bool) (*github.PullRequest, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreatePR", ctx, branch, base, upstreamURL, commit)
+	ret := m.ctrl.Call(m, "CreatePR", ctx, branch, base, upstreamURL, commit, draft)
 	ret0, _ := ret[0].(*github.PullRequest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreatePR indicates an expected call of CreatePR.
-func (mr *MockCreatorMockRecorder) CreatePR(ctx, branch, base, upstreamURL, commit interface{}) *gomock.Call {
+func (mr *MockCreatorMockRecorder) CreatePR(ctx, branch, base, upstreamURL, commit, draft interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePR", reflect.TypeOf((*MockCreator)(nil).CreatePR), ctx, branch, base, upstreamURL, commit)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePR", reflect.TypeOf((*MockCreator)(nil).CreatePR), ctx, branch, base, upstreamURL, commit, draft)
 }

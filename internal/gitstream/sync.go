@@ -141,7 +141,15 @@ func (s *Sync) cherryPickAndPush(ctx context.Context, commit *object.Commit, bra
 		return fmt.Errorf("error while pushing branch %s: %v", branchName, err)
 	}
 
-	pr, err := s.Creator.CreatePR(ctx, branchName, s.DownstreamConfig.MainBranch, s.UpstreamConfig.URL, commit)
+	pr, err := s.Creator.CreatePR(
+		ctx,
+		branchName,
+		s.DownstreamConfig.MainBranch,
+		s.UpstreamConfig.URL,
+		commit,
+		s.DownstreamConfig.CreateDraftPRs,
+	)
+
 	if err != nil {
 		return fmt.Errorf("could not create PR: %v", err)
 	}

@@ -147,16 +147,15 @@ func TestCreatorImpl_CreateIssue(t *testing.T) {
 }
 
 func TestCreatorImpl_CreatePR(t *testing.T) {
-	const expectedBody = "This is an automated cherry-pick by gitstream of `e3229f3c533ed51070beff092e5c7694a8ee81f0` from `some-upstream-url`.\n\n" +
-		"---\n\n" +
-		"Markup: e3229f3c533ed51070beff092e5c7694a8ee81f0"
-
-	const expectedTitle = "Cherry-pick `e3229f3c533ed51070beff092e5c7694a8ee81f0` from upstream"
-
 	const (
-		owner    = "owner"
-		repo     = "repo"
-		prNumber = 456
+		draft        = true
+		expectedBody = "This is an automated cherry-pick by gitstream of `e3229f3c533ed51070beff092e5c7694a8ee81f0` from `some-upstream-url`.\n\n" +
+			"---\n\n" +
+			"Markup: e3229f3c533ed51070beff092e5c7694a8ee81f0"
+		expectedTitle = "Cherry-pick `e3229f3c533ed51070beff092e5c7694a8ee81f0` from upstream"
+		owner         = "owner"
+		prNumber      = 456
+		repo          = "repo"
 	)
 
 	pr := &github.PullRequest{
@@ -176,6 +175,7 @@ func TestCreatorImpl_CreatePR(t *testing.T) {
 
 				assert.Equal(t, expectedBody, m["body"])
 				assert.Equal(t, expectedTitle, m["title"])
+				assert.Equal(t, draft, m["draft"])
 
 				assert.NoError(
 					t,
@@ -212,6 +212,7 @@ func TestCreatorImpl_CreatePR(t *testing.T) {
 		"main",
 		"some-upstream-url",
 		&object.Commit{Hash: plumbing.NewHash("e3229f3c533ed51070beff092e5c7694a8ee81f0")},
+		draft,
 	)
 
 	assert.NoError(t, err)
