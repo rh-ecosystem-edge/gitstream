@@ -15,6 +15,7 @@ import (
 //go:generate mockgen -source=helper.go -package=gitutils -destination=mock_helper.go
 
 type Helper interface {
+	FetchRemoteContext(ctx context.Context, remoteName string) error
 	GetBranchRef(ctx context.Context, branchName string) (*plumbing.Reference, error)
 	GetRemoteRef(ctx context.Context, remoteName, branchName string) (*plumbing.Reference, error)
 	PushContextWithAuth(ctx context.Context, token string) error
@@ -30,19 +31,27 @@ func NewHelper(repo *git.Repository, logger logr.Logger) Helper {
 	return &HelperImpl{repo: repo, logger: logger}
 }
 
-func (h *HelperImpl) GetBranchRef(ctx context.Context, branchName string) (*plumbing.Reference, error) {
-	return h.repo.Reference(plumbing.NewBranchReferenceName(branchName), true)
-}
-
-func (h *HelperImpl) GetRemoteRef(ctx context.Context, remoteName, branchName string) (*plumbing.Reference, error) {
+func (h *HelperImpl) FetchRemoteContext(ctx context.Context, remoteName string) error {
 	remote, err := h.repo.Remote(remoteName)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("could not find remote %s: %v", remoteName, err)
 	}
 
 	fo := git.FetchOptions{RemoteName: remoteName}
 
 	if err := remote.FetchContext(ctx, &fo); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
+		return fmt.Errorf("could not fetch remote %s: %v", remoteName, err)
+	}
+
+	return nil
+}
+
+func (h *HelperImpl) GetBranchRef(ctx context.Context, branchName string) (*plumbing.Reference, error) {
+	return h.repo.Reference(plumbing.NewBranchReferenceName(branchName), true)
+}
+
+func (h *HelperImpl) GetRemoteRef(ctx context.Context, remoteName, branchName string) (*plumbing.Reference, error) {
+	if err := h.FetchRemoteContext(ctx, remoteName); err != nil {
 		return nil, fmt.Errorf("could not fetch remote %s: %v", remoteName, err)
 	}
 

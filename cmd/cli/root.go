@@ -26,7 +26,13 @@ type App struct {
 func (a *App) GetCLIApp() *cli.App {
 	const logLevelFlagName = "log-level"
 
-	var configPath string
+	var (
+		configPath string
+		flagDryRun = &cli.BoolFlag{
+			Name:  "dry-run",
+			Usage: "if true, no code is pushed and no content is created through the API",
+		}
+	)
 
 	commit := getGitCommit()
 
@@ -80,15 +86,16 @@ func (a *App) GetCLIApp() *cli.App {
 			Usage:  "List upstream commits and try to find them downstream",
 		},
 		{
+			Name:   "make-oldest-draft-pr-ready",
+			Action: a.makeOldestDraftPRReady,
+			Flags:  []cli.Flag{flagDryRun},
+			Usage:  "Make the oldest draft GitStream PR ready",
+		},
+		{
 			Name:   "sync",
 			Action: a.sync,
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "dry-run",
-					Usage: "if true, no code is pushed and no content is created through the API",
-				},
-			},
-			Usage: "Try to apply missing upstream commits to the downstream repository",
+			Flags:  []cli.Flag{flagDryRun},
+			Usage:  "Try to apply missing upstream commits to the downstream repository",
 		},
 	}
 
@@ -144,6 +151,51 @@ func (a *App) diff(c *cli.Context) error {
 	}
 
 	return d.Run(ctx)
+}
+
+func (a *App) makeOldestDraftPRReady(c *cli.Context) error {
+	ctx := c.Context
+
+	token, err := getGitHubTokenFromEnv()
+	if err != nil {
+		return fmt.Errorf("could not create a GitHub client: %v", err)
+	}
+
+	gc := gh.NewGitHubClient(ctx, token)
+
+	repoName, err := gh.ParseRepoName(a.Config.Downstream.GitHubRepoName)
+	if err != nil {
+		return fmt.Errorf("%q: invalid repository name", a.Config.Downstream.GitHubRepoName)
+	}
+
+	repoPath := a.Config.Downstream.LocalRepoPath
+
+	repo, err := git.PlainOpenWithOptions(repoPath, &git.PlainOpenOptions{})
+	if err != nil {
+		return fmt.Errorf("could not open the downstream repo: %v", err)
+	}
+
+	helper := gitutils.NewHelper(repo, a.Logger)
+
+	finder, err := markup.NewFinder(a.Config.CommitMarkup)
+	if err != nil {
+		return fmt.Errorf("could not create the markup finder: %v", err)
+	}
+
+	u := gitstream.Undraft{
+		DiffConfig:       a.Config.Diff,
+		DownstreamConfig: a.Config.Downstream,
+		DryRun:           c.Bool("dry-run"),
+		Finder:           finder,
+		GitHelper:        helper,
+		GitHubClient:     gc,
+		Logger:           a.Logger,
+		Repo:             repo,
+		RepoName:         repoName,
+		UpstreamConfig:   a.Config.Upstream,
+	}
+
+	return u.Run(ctx)
 }
 
 func (a *App) sync(c *cli.Context) error {

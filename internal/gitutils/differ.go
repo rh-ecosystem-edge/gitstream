@@ -14,8 +14,6 @@ import (
 	"github.com/qbarrand/gitstream/internal/intents"
 )
 
-const upstreamRemoteName = internal.GitStreamPrefix + "upstream"
-
 //go:generate mockgen -source=differ.go -package=gitutils -destination=mock_differ.go
 
 type Differ interface {
@@ -70,13 +68,13 @@ func (d *DifferImpl) GetMissingCommits(
 		prIntents,
 	)
 
-	if _, err = d.helper.RecreateRemote(ctx, upstreamRemoteName, usCfg.URL); err != nil {
+	if _, err = d.helper.RecreateRemote(ctx, internal.UpstreamRemoteName, usCfg.URL); err != nil {
 		return nil, fmt.Errorf("could not recreate remote: %v", err)
 	}
 
-	from, err := d.helper.GetRemoteRef(ctx, upstreamRemoteName, usCfg.Ref)
+	from, err := d.helper.GetRemoteRef(ctx, internal.UpstreamRemoteName, usCfg.Ref)
 	if err != nil {
-		return nil, fmt.Errorf("could not get the ref for %s/%s: %v", upstreamRemoteName, usCfg.Ref, err)
+		return nil, fmt.Errorf("could not get the ref for %s/%s: %v", internal.UpstreamRemoteName, usCfg.Ref, err)
 	}
 
 	commits := make([]*object.Commit, 0)
