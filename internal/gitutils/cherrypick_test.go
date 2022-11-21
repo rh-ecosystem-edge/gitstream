@@ -52,7 +52,7 @@ func TestCherryPickerImpl_Run(t *testing.T) {
 	gomock.InOrder(
 		executor.
 			EXPECT().
-			RunCommand(ctx, logger, "git", repoPath, "cherry-pick", "-n", sha).
+			RunCommand(ctx, logger, "git", repoPath, "cherry-pick", "-n", sha, "-m1").
 			Do(func(_ context.Context, _ logr.Logger, _, _ string, _ ...string) {
 				wt, err := repo.Worktree()
 				require.NoError(t, err)

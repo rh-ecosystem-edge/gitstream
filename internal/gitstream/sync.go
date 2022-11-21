@@ -19,14 +19,15 @@ import (
 
 type Sync struct {
 	CherryPicker     gitutils.CherryPicker
-	Creator          gh.Creator
 	Differ           gitutils.Differ
 	DiffConfig       config.Diff
 	DownstreamConfig config.Downstream
 	DryRun           bool
 	GitHelper        gitutils.Helper
 	GitHubToken      string
+	IssueHelper      gh.IssueHelper
 	Logger           logr.Logger
+	PRHelper         gh.PRHelper
 	Repo             *git.Repository
 	RepoName         *gh.RepoName
 	UpstreamConfig   config.Upstream
@@ -45,6 +46,26 @@ func (s *Sync) Run(ctx context.Context) error {
 		return fmt.Errorf("could not get commits not present in downstream: %v", err)
 	}
 
+	s.Logger.V(1).Info("Listing open objects")
+
+	issuesAndPRs, err := s.IssueHelper.ListAllOpen(ctx, true)
+	if err != nil {
+		return fmt.Errorf("could not list issues: %v", err)
+	}
+
+	existingOpenItems := len(issuesAndPRs)
+	maxItems := s.DownstreamConfig.MaxOpenItems
+
+	if maxItems != -1 && existingOpenItems > maxItems {
+		s.Logger.Info(
+			"Maximum number of items on GitHub exceeded",
+			"open", existingOpenItems,
+			"max", maxItems,
+		)
+
+		return nil
+	}
+
 	sort.Slice(commits, func(i, j int) bool {
 		return commits[i].Committer.When.Before(commits[j].Committer.When)
 	})
@@ -59,12 +80,26 @@ func (s *Sync) Run(ctx context.Context) error {
 		Force:  true,
 	}
 
+	canBeCreated := maxItems - existingOpenItems
+
 	for _, c := range commits {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 		}
+
+		if maxItems != -1 && canBeCreated <= 0 {
+			s.Logger.Info(
+				"Maximum number of open objects reached",
+				"existing", existingOpenItems,
+				"max", maxItems,
+			)
+
+			return nil
+		}
+
+		canBeCreated--
 
 		sha := c.Hash.String()
 
@@ -110,7 +145,7 @@ func (s *Sync) Run(ctx context.Context) error {
 				continue
 			}
 
-			if issue, err := s.Creator.CreateIssue(ctx, err, s.UpstreamConfig.URL, c); err != nil {
+			if issue, err := s.IssueHelper.Create(ctx, err, s.UpstreamConfig.URL, c); err != nil {
 				logger.Error(err, "could not create issue for commit")
 			} else {
 				logger.Info("Created issue", "url", *issue.HTMLURL)
@@ -141,7 +176,7 @@ func (s *Sync) cherryPickAndPush(ctx context.Context, commit *object.Commit, bra
 		return fmt.Errorf("error while pushing branch %s: %v", branchName, err)
 	}
 
-	pr, err := s.Creator.CreatePR(
+	pr, err := s.PRHelper.Create(
 		ctx,
 		branchName,
 		s.DownstreamConfig.MainBranch,

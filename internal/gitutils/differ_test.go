@@ -61,9 +61,19 @@ func TestDifferImpl_GetMissingCommits(t *testing.T) {
 
 	gomock.InOrder(
 		helper.EXPECT().GetBranchRef(ctx, dsMainBranch).Return(dsMainRef, nil),
-		ig.EXPECT().FromLocalGitRepo(ctx, repo, dsMainHash, &since).Return(intents.CommitIntents{logHash: "commit from log"}, nil),
-		ig.EXPECT().FromGitHubIssues(ctx, &repoName).Return(intents.CommitIntents{issueHash: "commit from issue"}, nil),
-		ig.EXPECT().FromGitHubOpenPRs(ctx, &repoName).Return(intents.CommitIntents{prHash: "commit from PR"}, nil),
+		ig.
+			EXPECT().
+			FromLocalGitRepo(ctx, repo, dsMainHash, &since).
+			Return(intents.CommitIntents{logHash: "commit from log"}, nil),
+		ig.
+			EXPECT().
+			FromGitHubIssues(ctx, &repoName).
+			Return(
+				intents.CommitIntents{
+					issueHash: "commit from issue",
+					prHash:    "commit from PR",
+				},
+				nil),
 		helper.EXPECT().RecreateRemote(ctx, remoteName, remoteURL),
 		helper.EXPECT().GetRemoteRef(ctx, remoteName, branchName).Return(head, nil),
 	)

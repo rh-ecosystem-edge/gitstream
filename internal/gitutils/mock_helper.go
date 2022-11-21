@@ -36,6 +36,20 @@ func (m *MockHelper) EXPECT() *MockHelperMockRecorder {
 	return m.recorder
 }
 
+// FetchRemoteContext mocks base method.
+func (m *MockHelper) FetchRemoteContext(ctx context.Context, remoteName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FetchRemoteContext", ctx, remoteName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FetchRemoteContext indicates an expected call of FetchRemoteContext.
+func (mr *MockHelperMockRecorder) FetchRemoteContext(ctx, remoteName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchRemoteContext", reflect.TypeOf((*MockHelper)(nil).FetchRemoteContext), ctx, remoteName)
+}
+
 // GetBranchRef mocks base method.
 func (m *MockHelper) GetBranchRef(ctx context.Context, branchName string) (*plumbing.Reference, error) {
 	m.ctrl.T.Helper()

@@ -24,6 +24,10 @@ func ParseRepoName(s string) (*RepoName, error) {
 	return &RepoName{Owner: items[0], Repo: items[1]}, nil
 }
 
+func (rn *RepoName) String() string {
+	return rn.Owner + "/" + rn.Repo
+}
+
 func NewGitHubClient(ctx context.Context, token string) *github.Client {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},

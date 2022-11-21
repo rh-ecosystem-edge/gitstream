@@ -38,7 +38,6 @@ func MergeCommitIntents(cis ...CommitIntents) CommitIntents {
 //go:generate mockgen -source=getter.go -package=intents -destination=mock_getter.go
 
 type Getter interface {
-	FromGitHubOpenPRs(ctx context.Context, rn *gh.RepoName) (CommitIntents, error)
 	FromGitHubIssues(ctx context.Context, rn *gh.RepoName) (CommitIntents, error)
 	FromLocalGitRepo(ctx context.Context, repo *git.Repository, from plumbing.Hash, since *time.Time) (CommitIntents, error)
 }
@@ -51,49 +50,6 @@ type GetterImpl struct {
 
 func NewIntentsGetter(finder markup.Finder, gc *github.Client, logger logr.Logger) *GetterImpl {
 	return &GetterImpl{finder: finder, gc: gc, logger: logger}
-}
-
-func (g *GetterImpl) FromGitHubOpenPRs(ctx context.Context, rn *gh.RepoName) (CommitIntents, error) {
-	intents := make(CommitIntents)
-
-	opt := &github.PullRequestListOptions{State: "open"}
-
-	for {
-		prs, resp, err := g.gc.PullRequests.List(ctx, rn.Owner, rn.Repo, opt)
-		if err != nil {
-			return nil, fmt.Errorf("error while listing PRs: %v", err)
-		}
-
-		for _, pr := range prs {
-			url := *pr.HTMLURL
-
-			logger := g.logger.WithValues("url", url)
-			logger.Info("Processing PR")
-
-			if pr.Body == nil {
-				logger.Info("PR body empty; skipping")
-				continue
-			}
-
-			shas, err := g.finder.FindSHAs(*pr.Body)
-			if err != nil {
-				return nil, fmt.Errorf("error while looking for SHAs in %q: %v", *pr.Body, err)
-			}
-
-			for _, s := range shas {
-				logger.Info("Adding SHA", "sha", s)
-				intents[s] = *pr.HTMLURL
-			}
-		}
-
-		if resp.NextPage == 0 {
-			break
-		}
-
-		opt.Page = resp.NextPage
-	}
-
-	return intents, nil
 }
 
 func (g *GetterImpl) FromGitHubIssues(ctx context.Context, rn *gh.RepoName) (CommitIntents, error) {
@@ -113,7 +69,7 @@ func (g *GetterImpl) FromGitHubIssues(ctx context.Context, rn *gh.RepoName) (Com
 		for _, issue := range issues {
 			url := *issue.HTMLURL
 
-			logger := g.logger.WithValues("url", url)
+			logger := g.logger.WithValues("url", url, "is PR", issue.PullRequestLinks != nil)
 			logger.Info("Processing issue")
 
 			if issue.Body == nil {

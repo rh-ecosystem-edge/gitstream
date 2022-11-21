@@ -7,7 +7,8 @@ import (
 )
 
 type Commit struct {
-	SHA string
+	Message string
+	SHA     string
 }
 
 type BaseData struct {

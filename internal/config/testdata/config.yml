@@ -4,6 +4,7 @@ downstream:
   github_repo_name: owner/repo
   local_repo_path: some-path
   main_branch: some-branch
+  max_open_items: 3
 
 log_level: 1000
 

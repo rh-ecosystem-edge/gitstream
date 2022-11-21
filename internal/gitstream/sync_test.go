@@ -35,7 +35,8 @@ func TestSync_Run(t *testing.T) {
 	)
 
 	mockCP := gitutils.NewMockCherryPicker(ctrl)
-	mockCreator := gh.NewMockCreator(ctrl)
+	mockIssueHelper := gh.NewMockIssueHelper(ctrl)
+	mockPRHelper := gh.NewMockPRHelper(ctrl)
 	mockDiffer := gitutils.NewMockDiffer(ctrl)
 	mockHelper := gitutils.NewMockHelper(ctrl)
 
@@ -57,7 +58,6 @@ func TestSync_Run(t *testing.T) {
 
 	s := Sync{
 		CherryPicker: mockCP,
-		Creator:      mockCreator,
 		Differ:       mockDiffer,
 		DiffConfig: config.Diff{
 			CommitsSince: &since,
@@ -65,14 +65,17 @@ func TestSync_Run(t *testing.T) {
 		DryRun:      dryRun,
 		GitHelper:   mockHelper,
 		GitHubToken: githubToken,
+		IssueHelper: mockIssueHelper,
 		Repo:        repo,
 		RepoName:    &ghRepoName,
 		DownstreamConfig: config.Downstream{
 			CreateDraftPRs: createDraftPRs,
 			LocalRepoPath:  repoPath,
 			MainBranch:     downstreamMainBranch,
+			MaxOpenItems:   -1,
 		},
 		Logger:         logger,
+		PRHelper:       mockPRHelper,
 		UpstreamConfig: upstreamConfig,
 	}
 
@@ -103,19 +106,20 @@ func TestSync_Run(t *testing.T) {
 			EXPECT().
 			GetMissingCommits(ctx, repo, &ghRepoName, &since, downstreamMainBranch, upstreamConfig).
 			Return([]*object.Commit{commit1, commit2}, nil),
+		mockIssueHelper.EXPECT().ListAllOpen(gomock.Any(), true),
 		mockCP.EXPECT().Run(ctx, repo, repoPath, commit2),
 		mockHelper.EXPECT().PushContextWithAuth(ctx, githubToken),
-		mockCreator.
+		mockPRHelper.
 			EXPECT().
-			CreatePR(ctx, branch2, downstreamMainBranch, upstreamURL, commit2, createDraftPRs).
+			Create(ctx, branch2, downstreamMainBranch, upstreamURL, commit2, createDraftPRs).
 			Return(&github.PullRequest{HTMLURL: github.String("some-string")}, nil),
 		mockCP.
 			EXPECT().
 			Run(ctx, repo, repoPath, commit1).
 			Return(randomError),
-		mockCreator.
+		mockIssueHelper.
 			EXPECT().
-			CreateIssue(ctx, &ErrMatcher{Err: randomError}, upstreamURL, commit1).
+			Create(ctx, &ErrMatcher{Err: randomError}, upstreamURL, commit1).
 			Return(&github.Issue{HTMLURL: github.String("some-string")}, nil),
 	)
 

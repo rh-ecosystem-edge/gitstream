@@ -53,21 +53,6 @@ func (mr *MockGetterMockRecorder) FromGitHubIssues(ctx, rn interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromGitHubIssues", reflect.TypeOf((*MockGetter)(nil).FromGitHubIssues), ctx, rn)
 }
 
-// FromGitHubOpenPRs mocks base method.
-func (m *MockGetter) FromGitHubOpenPRs(ctx context.Context, rn *github.RepoName) (CommitIntents, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FromGitHubOpenPRs", ctx, rn)
-	ret0, _ := ret[0].(CommitIntents)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// FromGitHubOpenPRs indicates an expected call of FromGitHubOpenPRs.
-func (mr *MockGetterMockRecorder) FromGitHubOpenPRs(ctx, rn interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromGitHubOpenPRs", reflect.TypeOf((*MockGetter)(nil).FromGitHubOpenPRs), ctx, rn)
-}
-
 // FromLocalGitRepo mocks base method.
 func (m *MockGetter) FromLocalGitRepo(ctx context.Context, repo *v5.Repository, from plumbing.Hash, since *time.Time) (CommitIntents, error) {
 	m.ctrl.T.Helper()

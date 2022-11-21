@@ -13,8 +13,12 @@ func TestReadConfig(t *testing.T) {
 	// This test checks default values.
 	expected := Config{
 		CommitMarkup: "Upstream-Commit",
-		Downstream:   Downstream{MainBranch: "main", LocalRepoPath: "."},
-		Upstream:     Upstream{Ref: "main"},
+		Downstream: Downstream{
+			LocalRepoPath: ".",
+			MainBranch:    "main",
+			MaxOpenItems:  -1,
+		},
+		Upstream: Upstream{Ref: "main"},
 	}
 
 	cfg, err := ReadConfig(strings.NewReader("---"))
@@ -30,8 +34,9 @@ func TestReadConfigFile(t *testing.T) {
 		CommitMarkup: "test",
 		Downstream: Downstream{
 			GitHubRepoName: "owner/repo",
-			MainBranch:     "some-branch",
 			LocalRepoPath:  "some-path",
+			MainBranch:     "some-branch",
+			MaxOpenItems:   3,
 		},
 		Diff: Diff{
 			CommitsSince: &since,

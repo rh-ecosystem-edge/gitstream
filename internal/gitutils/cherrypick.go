@@ -39,7 +39,7 @@ func (c *CherryPickerImpl) Run(ctx context.Context, repo *git.Repository, repoPa
 
 	logger := c.logger.WithValues("sha", sha)
 
-	if err := c.executor.RunCommand(ctx, logger, "git", repoPath, "cherry-pick", "-n", sha); err != nil {
+	if err := c.executor.RunCommand(ctx, logger, "git", repoPath, "cherry-pick", "-n", sha, "-m1"); err != nil {
 		return fmt.Errorf("error running git: %w", err)
 	}
 

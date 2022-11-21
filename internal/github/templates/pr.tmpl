@@ -1,6 +1,11 @@
 {{- /*gotype: github.com/qbarrand/gitstream/internal/github.PRData*/ -}}
 This is an automated cherry-pick by {{ .AppName }} of `{{ .Commit.SHA }}` from `{{ .UpstreamURL }}`.
 
+Commit message:
+```
+{{ .Commit.Message }}
+```
+
 ---
 
 {{ .Markup }}: {{ .Commit.SHA }}

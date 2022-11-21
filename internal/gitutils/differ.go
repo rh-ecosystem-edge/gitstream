@@ -57,16 +57,7 @@ func (d *DifferImpl) GetMissingCommits(
 		return nil, fmt.Errorf("could not get hashes from issues: %v", err)
 	}
 
-	prIntents, err := d.intentsGetter.FromGitHubOpenPRs(ctx, repoName)
-	if err != nil {
-		return nil, fmt.Errorf("could not get hashes from PRs: %v", err)
-	}
-
-	downstreamIntents := intents.MergeCommitIntents(
-		logIntents,
-		issueIntents,
-		prIntents,
-	)
+	downstreamIntents := intents.MergeCommitIntents(logIntents, issueIntents)
 
 	if _, err = d.helper.RecreateRemote(ctx, internal.UpstreamRemoteName, usCfg.URL); err != nil {
 		return nil, fmt.Errorf("could not recreate remote: %v", err)

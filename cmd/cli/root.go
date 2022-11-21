@@ -6,6 +6,8 @@ import (
 	"os"
 	"runtime/debug"
 
+	ghcli "github.com/cli/go-gh"
+	"github.com/cli/go-gh/pkg/api"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
@@ -196,19 +198,20 @@ func (a *App) makeOldestDraftPRReady(c *cli.Context) error {
 
 	gc := gh.NewGitHubClient(ctx, token)
 
+	ghgql, err := ghcli.GQLClient(&api.ClientOptions{AuthToken: token})
+	if err != nil {
+		return fmt.Errorf("could not create a new GraphQL client: %v", err)
+	}
+
 	repoName, err := gh.ParseRepoName(a.Config.Downstream.GitHubRepoName)
 	if err != nil {
 		return fmt.Errorf("%q: invalid repository name", a.Config.Downstream.GitHubRepoName)
 	}
 
-	repoPath := a.Config.Downstream.LocalRepoPath
-
-	repo, err := git.PlainOpenWithOptions(repoPath, &git.PlainOpenOptions{})
+	repo, err := git.PlainOpenWithOptions(a.Config.Downstream.LocalRepoPath, &git.PlainOpenOptions{})
 	if err != nil {
 		return fmt.Errorf("could not open the downstream repo: %v", err)
 	}
-
-	helper := gitutils.NewHelper(repo, a.Logger)
 
 	finder, err := markup.NewFinder(a.Config.CommitMarkup)
 	if err != nil {
@@ -216,16 +219,14 @@ func (a *App) makeOldestDraftPRReady(c *cli.Context) error {
 	}
 
 	u := gitstream.Undraft{
-		DiffConfig:       a.Config.Diff,
-		DownstreamConfig: a.Config.Downstream,
-		DryRun:           c.Bool("dry-run"),
-		Finder:           finder,
-		GitHelper:        helper,
-		GitHubClient:     gc,
-		Logger:           a.Logger,
-		Repo:             repo,
-		RepoName:         repoName,
-		UpstreamConfig:   a.Config.Upstream,
+		DryRun:         c.Bool("dry-run"),
+		Finder:         finder,
+		GitHelper:      gitutils.NewHelper(repo, a.Logger),
+		Logger:         a.Logger,
+		PRHelper:       gh.NewPRHelper(gc, ghgql, a.Config.CommitMarkup, repoName),
+		Repo:           repo,
+		RepoName:       repoName,
+		UpstreamConfig: a.Config.Upstream,
 	}
 
 	return u.Run(ctx)
@@ -241,14 +242,17 @@ func (a *App) sync(c *cli.Context) error {
 
 	gc := gh.NewGitHubClient(ctx, token)
 
+	ghgql, err := ghcli.GQLClient(&api.ClientOptions{AuthToken: token})
+	if err != nil {
+		return fmt.Errorf("could not create a new GraphQL client: %v", err)
+	}
+
 	repoName, err := gh.ParseRepoName(a.Config.Downstream.GitHubRepoName)
 	if err != nil {
 		return fmt.Errorf("%q: invalid repository name", a.Config.Downstream.GitHubRepoName)
 	}
 
-	repoPath := a.Config.Downstream.LocalRepoPath
-
-	repo, err := git.PlainOpenWithOptions(repoPath, &git.PlainOpenOptions{})
+	repo, err := git.PlainOpenWithOptions(a.Config.Downstream.LocalRepoPath, &git.PlainOpenOptions{})
 	if err != nil {
 		return fmt.Errorf("could not open the downstream repo: %v", err)
 	}
@@ -262,7 +266,6 @@ func (a *App) sync(c *cli.Context) error {
 
 	s := gitstream.Sync{
 		CherryPicker: gitutils.NewCherryPicker(a.Config.CommitMarkup, a.Logger, a.Config.Sync.BeforeCommit...),
-		Creator:      gh.NewCreator(gc, a.Config.CommitMarkup, repoName),
 		Differ: gitutils.NewDiffer(
 			helper,
 			intents.NewIntentsGetter(finder, gc, a.Logger),
@@ -273,7 +276,9 @@ func (a *App) sync(c *cli.Context) error {
 		DryRun:           c.Bool("dry-run"),
 		GitHelper:        helper,
 		GitHubToken:      token,
+		IssueHelper:      gh.NewIssueHelper(gc, a.Config.CommitMarkup, repoName),
 		Logger:           a.Logger,
+		PRHelper:         gh.NewPRHelper(gc, ghgql, a.Config.CommitMarkup, repoName),
 		Repo:             repo,
 		RepoName:         repoName,
 		UpstreamConfig:   a.Config.Upstream,

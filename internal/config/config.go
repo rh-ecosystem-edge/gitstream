@@ -15,6 +15,7 @@ type Downstream struct {
 	GitHubRepoName string `yaml:"github_repo_name"`
 	LocalRepoPath  string `yaml:"local_repo_path" default:"."`
 	MainBranch     string `yaml:"main_branch" default:"main"`
+	MaxOpenItems   int    `yaml:"max_open_items" default:"-1"`
 }
 
 type Diff struct {
