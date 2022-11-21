@@ -8,6 +8,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-logr/logr"
 )
@@ -67,7 +68,7 @@ func (h *HelperImpl) GetRemoteRef(ctx context.Context, remoteName, branchName st
 
 func (h *HelperImpl) PushContextWithAuth(ctx context.Context, token string) error {
 	po := git.PushOptions{
-		Auth:  &http.BasicAuth{Username: token},
+		Auth:  AuthFromToken(token),
 		Force: true,
 	}
 
@@ -97,4 +98,8 @@ func (h *HelperImpl) RecreateRemote(ctx context.Context, remoteName, remoteURL s
 	}
 
 	return h.repo.CreateRemote(&rc)
+}
+
+func AuthFromToken(token string) transport.AuthMethod {
+	return &http.BasicAuth{Username: token}
 }

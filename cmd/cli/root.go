@@ -81,6 +81,11 @@ func (a *App) GetCLIApp() *cli.App {
 
 	app.Commands = []*cli.Command{
 		{
+			Name:   "delete-remote-branches",
+			Action: a.deleteRemoteBranches,
+			Usage:  "Delete all branches with the GitStream prefix on the downstream repository",
+		},
+		{
 			Name:   "diff",
 			Action: a.diff,
 			Usage:  "List upstream commits and try to find them downstream",
@@ -109,6 +114,34 @@ func getGitHubTokenFromEnv() (string, error) {
 	}
 
 	return token, nil
+}
+
+func (a *App) deleteRemoteBranches(c *cli.Context) error {
+	ctx := c.Context
+
+	token, err := getGitHubTokenFromEnv()
+	if err != nil {
+		return fmt.Errorf("could not create a GitHub client: %v", err)
+	}
+
+	repoName, err := gh.ParseRepoName(a.Config.Downstream.GitHubRepoName)
+	if err != nil {
+		return fmt.Errorf("%q: invalid repository name", a.Config.Downstream.GitHubRepoName)
+	}
+
+	repo, err := git.PlainOpenWithOptions(a.Config.Downstream.LocalRepoPath, &git.PlainOpenOptions{})
+	if err != nil {
+		return fmt.Errorf("could not open the downstream repo: %v", err)
+	}
+
+	d := gitstream.DeleteRemoteBranches{
+		GitHubToken: token,
+		Logger:      a.Logger,
+		RepoName:    repoName,
+		Repo:        repo,
+	}
+
+	return d.Run(ctx)
 }
 
 func (a *App) diff(c *cli.Context) error {
