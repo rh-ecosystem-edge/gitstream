@@ -27,10 +27,10 @@ func (d *Diff) Run(ctx context.Context) error {
 		return fmt.Errorf("could not get commits not present in downstream: %v", err)
 	}
 
-	for h, c := range diff {
+	for _, c := range diff {
 		d.Logger.Info(
 			"Commit present upstream but not downstream",
-			"sha", h,
+			"sha", c.Hash,
 			"message", c.Message)
 	}
 
