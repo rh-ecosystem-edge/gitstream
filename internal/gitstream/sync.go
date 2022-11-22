@@ -46,20 +46,23 @@ func (s *Sync) Run(ctx context.Context) error {
 		return fmt.Errorf("could not get commits not present in downstream: %v", err)
 	}
 
-	s.Logger.V(1).Info("Listing open objects")
+	s.Logger.V(1).Info("Listing GitStream issues (including PRs)")
 
 	issuesAndPRs, err := s.IssueHelper.ListAllOpen(ctx, true)
 	if err != nil {
 		return fmt.Errorf("could not list issues: %v", err)
 	}
 
-	existingOpenItems := len(issuesAndPRs)
+	existingOpenIssues := len(issuesAndPRs)
+
+	s.Logger.V(1).Info("Listed GitStream issues (including PRs)", "total", existingOpenIssues)
+
 	maxItems := s.DownstreamConfig.MaxOpenItems
 
-	if maxItems != -1 && existingOpenItems > maxItems {
+	if maxItems != -1 && existingOpenIssues > maxItems {
 		s.Logger.Info(
 			"Maximum number of items on GitHub exceeded",
-			"open", existingOpenItems,
+			"open", existingOpenIssues,
 			"max", maxItems,
 		)
 
@@ -80,7 +83,7 @@ func (s *Sync) Run(ctx context.Context) error {
 		Force:  true,
 	}
 
-	canBeCreated := maxItems - existingOpenItems
+	canBeCreated := maxItems - existingOpenIssues
 
 	for _, c := range commits {
 		select {
@@ -92,7 +95,7 @@ func (s *Sync) Run(ctx context.Context) error {
 		if maxItems != -1 && canBeCreated <= 0 {
 			s.Logger.Info(
 				"Maximum number of open objects reached",
-				"existing", existingOpenItems,
+				"existing", existingOpenIssues,
 				"max", maxItems,
 			)
 
