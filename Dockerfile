@@ -13,7 +13,7 @@ COPY internal internal
 
 RUN ["go", "build", "-o", "gitstream"]
 
-FROM alpine:3.16
+FROM alpine:3.17.0
 
 RUN ["apk", "add", "ca-certificates"]
 
