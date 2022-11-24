@@ -19,7 +19,7 @@ type Helper interface {
 	FetchRemoteContext(ctx context.Context, remoteName, branchName string) error
 	GetBranchRef(ctx context.Context, branchName string) (*plumbing.Reference, error)
 	GetRemoteRef(ctx context.Context, remoteName, branchName string) (*plumbing.Reference, error)
-	PushContextWithAuth(ctx context.Context, token string) error
+	PushContextWithAuth(ctx context.Context, token, remoteName string) error
 	RecreateRemote(ctx context.Context, remoteNAme, remoteURL string) (*git.Remote, error)
 }
 
@@ -73,10 +73,11 @@ func (h *HelperImpl) GetRemoteRef(ctx context.Context, remoteName, branchName st
 	return ref, nil
 }
 
-func (h *HelperImpl) PushContextWithAuth(ctx context.Context, token string) error {
+func (h *HelperImpl) PushContextWithAuth(ctx context.Context, token, remoteName string) error {
 	po := git.PushOptions{
-		Auth:  AuthFromToken(token),
-		Force: true,
+		Auth:       AuthFromToken(token),
+		RemoteName: remoteName,
+		Force:      true,
 	}
 
 	return h.repo.PushContext(ctx, &po)

@@ -175,7 +175,7 @@ func (s *Sync) cherryPickAndPush(ctx context.Context, commit *object.Commit, bra
 		return nil
 	}
 
-	if err := s.GitHelper.PushContextWithAuth(ctx, s.GitHubToken); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
+	if err := s.GitHelper.PushContextWithAuth(ctx, s.GitHubToken, "origin"); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
 		return fmt.Errorf("error while pushing branch %s: %v", branchName, err)
 	}
 
