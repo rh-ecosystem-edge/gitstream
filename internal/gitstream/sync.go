@@ -148,11 +148,13 @@ func (s *Sync) Run(ctx context.Context) error {
 				continue
 			}
 
-			if issue, err := s.IssueHelper.Create(ctx, err, s.UpstreamConfig.URL, c); err != nil {
-				logger.Error(err, "could not create issue for commit")
-			} else {
-				logger.Info("Created issue", "url", *issue.HTMLURL)
+			issue, err := s.IssueHelper.Create(ctx, err, s.UpstreamConfig.URL, c)
+			if err != nil {
+				return fmt.Errorf("could not create issue for commit %s: %v", sha, err)
 			}
+
+			logger.Info("Created issue", "url", *issue.HTMLURL)
+			continue
 		}
 
 		if s.DryRun {
