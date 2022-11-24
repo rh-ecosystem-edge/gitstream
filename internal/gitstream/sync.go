@@ -142,24 +142,42 @@ func (s *Sync) Run(ctx context.Context) error {
 
 		logger.Info("Running cherry-pick")
 
-		if err := s.cherryPickAndPush(ctx, c, branchName, logger); err != nil {
+		if err := s.cherryPick(ctx, c, branchName, logger); err != nil {
 			if s.DryRun {
 				logger.Info("Dry run: skipping issue creation")
 				continue
 			}
 
-			if issue, err := s.IssueHelper.Create(ctx, err, s.UpstreamConfig.URL, c); err != nil {
-				logger.Error(err, "could not create issue for commit")
-			} else {
-				logger.Info("Created issue", "url", *issue.HTMLURL)
+			issue, err := s.IssueHelper.Create(ctx, err, s.UpstreamConfig.URL, c)
+			if err != nil {
+				return fmt.Errorf("could not create issue for commit %s: %v", sha, err)
 			}
+
+			logger.Info("Created issue", "url", *issue.HTMLURL)
+			continue
 		}
+
+		if s.DryRun {
+			logger.Info("Dry run: skipping push")
+			return nil
+		}
+
+		if err := s.GitHelper.PushContextWithAuth(ctx, s.GitHubToken); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
+			return fmt.Errorf("error while pushing branch %s: %v", branchName, err)
+		}
+
+		pr, err := s.PRHelper.Create(ctx, branchName, s.DownstreamConfig.MainBranch, s.UpstreamConfig.URL, c, s.DownstreamConfig.CreateDraftPRs)
+		if err != nil {
+			return fmt.Errorf("could not create PR: %v", err)
+		}
+
+		logger.Info("Created PR", "url", pr.HTMLURL)
 	}
 
 	return nil
 }
 
-func (s *Sync) cherryPickAndPush(ctx context.Context, commit *object.Commit, branchName string, logger logr.Logger) error {
+func (s *Sync) cherryPick(ctx context.Context, commit *object.Commit, branchName string, logger logr.Logger) error {
 	if err := s.CherryPicker.Run(ctx, s.Repo, s.DownstreamConfig.LocalRepoPath, commit); err != nil {
 		pe := &process.Error{}
 
@@ -169,30 +187,6 @@ func (s *Sync) cherryPickAndPush(ctx context.Context, commit *object.Commit, bra
 
 		return fmt.Errorf("could not cherry-pick: %w", err)
 	}
-
-	if s.DryRun {
-		logger.Info("Dry run: skipping push")
-		return nil
-	}
-
-	if err := s.GitHelper.PushContextWithAuth(ctx, s.GitHubToken); err != nil {
-		return fmt.Errorf("error while pushing branch %s: %v", branchName, err)
-	}
-
-	pr, err := s.PRHelper.Create(
-		ctx,
-		branchName,
-		s.DownstreamConfig.MainBranch,
-		s.UpstreamConfig.URL,
-		commit,
-		s.DownstreamConfig.CreateDraftPRs,
-	)
-
-	if err != nil {
-		return fmt.Errorf("could not create PR: %v", err)
-	}
-
-	logger.Info("Created PR", "url", pr.HTMLURL)
 
 	return nil
 }

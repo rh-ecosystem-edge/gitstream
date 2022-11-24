@@ -126,11 +126,6 @@ func (a *App) deleteRemoteBranches(c *cli.Context) error {
 		return fmt.Errorf("could not create a GitHub client: %v", err)
 	}
 
-	repoName, err := gh.ParseRepoName(a.Config.Downstream.GitHubRepoName)
-	if err != nil {
-		return fmt.Errorf("%q: invalid repository name", a.Config.Downstream.GitHubRepoName)
-	}
-
 	repo, err := git.PlainOpenWithOptions(a.Config.Downstream.LocalRepoPath, &git.PlainOpenOptions{})
 	if err != nil {
 		return fmt.Errorf("could not open the downstream repo: %v", err)
@@ -139,7 +134,6 @@ func (a *App) deleteRemoteBranches(c *cli.Context) error {
 	d := gitstream.DeleteRemoteBranches{
 		GitHubToken: token,
 		Logger:      a.Logger,
-		RepoName:    repoName,
 		Repo:        repo,
 	}
 
