@@ -10,7 +10,6 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-logr/logr"
 	"github.com/qbarrand/gitstream/internal"
-	gh "github.com/qbarrand/gitstream/internal/github"
 	"github.com/qbarrand/gitstream/internal/gitutils"
 )
 
@@ -18,21 +17,14 @@ type DeleteRemoteBranches struct {
 	GitHubToken string
 	Logger      logr.Logger
 	Repo        *git.Repository
-	RepoName    *gh.RepoName
 }
 
 func (d *DeleteRemoteBranches) Run(ctx context.Context) error {
-	h := gitutils.NewHelper(d.Repo, logr.Discard())
-
 	const remoteName = "origin"
-
-	if err := h.FetchRemoteContext(ctx, remoteName); err != nil {
-		return fmt.Errorf("could not fetch remote %s: %v", remoteName, err)
-	}
 
 	remote, err := d.Repo.Remote(remoteName)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("could not get remote %s: %v", remoteName, err)
 	}
 
 	auth := gitutils.AuthFromToken(d.GitHubToken)

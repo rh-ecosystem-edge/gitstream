@@ -33,7 +33,7 @@ func (u *Undraft) Run(ctx context.Context) error {
 		return fmt.Errorf("could not recreate remote: %v", err)
 	}
 
-	if err := u.GitHelper.FetchRemoteContext(ctx, remoteName); err != nil {
+	if err := u.GitHelper.FetchRemoteContext(ctx, remoteName, u.UpstreamConfig.Ref); err != nil {
 		return fmt.Errorf("could not fetch remote %s: %v", remoteName, err)
 	}
 
