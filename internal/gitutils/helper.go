@@ -108,5 +108,6 @@ func (h *HelperImpl) RecreateRemote(ctx context.Context, remoteName, remoteURL s
 }
 
 func AuthFromToken(token string) transport.AuthMethod {
-	return &http.BasicAuth{Username: token}
+	return &http.TokenAuth{Token: token}
+	//return &http.BasicAuth{Username: token}
 }
