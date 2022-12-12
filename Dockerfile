@@ -11,6 +11,7 @@ COPY main.go main.go
 COPY cmd cmd
 COPY internal internal
 
+RUN ["apk", "add", "gcc", "musl-dev"]
 RUN ["go", "build", "-o", "gitstream"]
 
 FROM alpine:3.17.0
