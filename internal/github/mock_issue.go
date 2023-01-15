@@ -36,6 +36,20 @@ func (m *MockIssueHelper) EXPECT() *MockIssueHelperMockRecorder {
 	return m.recorder
 }
 
+// Assign mocks base method.
+func (m *MockIssueHelper) Assign(ctx context.Context, issue *github.Issue, userLogin string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Assign", ctx, issue, userLogin)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Assign indicates an expected call of Assign.
+func (mr *MockIssueHelperMockRecorder) Assign(ctx, issue, userLogin interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Assign", reflect.TypeOf((*MockIssueHelper)(nil).Assign), ctx, issue, userLogin)
+}
+
 // Create mocks base method.
 func (m *MockIssueHelper) Create(ctx context.Context, err error, upstreamURL string, commit *object.Commit) (*github.Issue, error) {
 	m.ctrl.T.Helper()

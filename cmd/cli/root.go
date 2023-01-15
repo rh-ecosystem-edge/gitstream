@@ -47,6 +47,10 @@ func (a *App) GetCLIApp() *cli.App {
 			Name:  "Quentin Barrand",
 			Email: "quba@redhat.com",
 		},
+		{
+			Name:  "Yoni Bettan",
+			Email: "yonibettan@gmail.com",
+		},
 	}
 
 	app.Version = "0.0.1-" + commit
@@ -103,6 +107,12 @@ func (a *App) GetCLIApp() *cli.App {
 			Action: a.sync,
 			Flags:  []cli.Flag{flagDryRun},
 			Usage:  "Try to apply missing upstream commits to the downstream repository",
+		},
+		{
+			Name:   "assign",
+			Action: a.assign,
+			Flags:  []cli.Flag{flagDryRun},
+			Usage:  "Assign open issues to the original commit author",
 		},
 	}
 
@@ -292,4 +302,45 @@ func getGitCommit() string {
 	}
 
 	return ""
+}
+
+func (a *App) assign(c *cli.Context) error {
+	ctx := c.Context
+
+	token, err := getGitHubTokenFromEnv()
+	if err != nil {
+		return fmt.Errorf("could not create a GitHub client: %v", err)
+	}
+
+	gc := gh.NewGitHubClient(ctx, token)
+
+	repoName, err := gh.ParseRepoName(a.Config.Downstream.GitHubRepoName)
+	if err != nil {
+		return fmt.Errorf("%q: invalid repository name", a.Config.Downstream.GitHubRepoName)
+	}
+
+	repo, err := git.PlainOpenWithOptions(a.Config.Downstream.LocalRepoPath, &git.PlainOpenOptions{})
+	if err != nil {
+		return fmt.Errorf("could not open the downstream repo: %v", err)
+	}
+
+	finder, err := markup.NewFinder(a.Config.CommitMarkup)
+	if err != nil {
+		return fmt.Errorf("could not create the markup finder: %v", err)
+	}
+
+	u := gitstream.Assign{
+		GC:             gc,
+		DryRun:         c.Bool("dry-run"),
+		Finder:         finder,
+		GitHelper:      gitutils.NewHelper(repo, a.Logger),
+		Logger:         a.Logger,
+		IssueHelper:    gh.NewIssueHelper(gc, a.Config.CommitMarkup, repoName),
+		UserHelper:     gh.NewUserHelper(gc, repoName),
+		Repo:           repo,
+		RepoName:       repoName,
+		UpstreamConfig: a.Config.Upstream,
+	}
+
+	return u.Run(ctx)
 }
