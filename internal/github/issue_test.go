@@ -154,3 +154,63 @@ func TestIssueHelper_Create(t *testing.T) {
 		assert.Equal(t, issue, res)
 	})
 }
+
+func TestIssueHelper_Assign(t *testing.T) {
+
+	issue := &github.Issue{Number: github.Int(456)}
+	username := "test-user"
+	repoName := &gh.RepoName{Owner: "owner", Repo: "repo"}
+
+	t.Run("API error", func(t *testing.T) {
+
+		c := mock.NewMockedHTTPClient(
+			mock.WithRequestMatchHandler(
+				mock.PostReposIssuesAssigneesByOwnerByRepoByIssueNumber,
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					m := make(map[string]interface{})
+					assert.NoError(
+						t,
+						json.NewDecoder(r.Body).Decode(&m),
+					)
+					assert.Equal(t, []interface{}{username}, m["assignees"])
+
+					w.WriteHeader(http.StatusBadRequest)
+				}),
+			),
+		)
+
+		gc := github.NewClient(c)
+
+		err := gh.NewIssueHelper(gc, "Markup", repoName).Assign(context.Background(), issue, username)
+
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "couldn't assign user")
+	})
+
+	t.Run("working as expected", func(t *testing.T) {
+
+		c := mock.NewMockedHTTPClient(
+			mock.WithRequestMatchHandler(
+				mock.PostReposIssuesAssigneesByOwnerByRepoByIssueNumber,
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					m := make(map[string]interface{})
+					assert.NoError(
+						t,
+						json.NewDecoder(r.Body).Decode(&m),
+					)
+					assert.Equal(t, []interface{}{username}, m["assignees"])
+					assert.NoError(
+						t,
+						json.NewEncoder(w).Encode(issue),
+					)
+				}),
+			),
+		)
+
+		gc := github.NewClient(c)
+
+		err := gh.NewIssueHelper(gc, "Markup", repoName).Assign(context.Background(), issue, username)
+
+		assert.NoError(t, err)
+	})
+}

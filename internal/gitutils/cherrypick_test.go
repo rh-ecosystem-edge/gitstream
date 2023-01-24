@@ -163,6 +163,6 @@ func TestExecutorHelper(t *testing.T) {
 	retCode, err := strconv.Atoi(os.Getenv("_TEST_RETCODE"))
 	require.NoError(t, err)
 
-	fmt.Fprintf(os.Stdout, os.Getenv("_TEST_OUTPUT"))
+	fmt.Fprint(os.Stdout, os.Getenv("_TEST_OUTPUT"))
 	os.Exit(retCode)
 }
