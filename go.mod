@@ -11,7 +11,7 @@ require (
 	github.com/go-logr/stdr v1.2.2
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v47 v47.1.0
-	github.com/migueleliasweb/go-github-mock v0.0.13
+	github.com/migueleliasweb/go-github-mock v0.0.14
 	github.com/shurcooL/githubv4 v0.0.0-20220520033151-0b4e3294ff00
 	github.com/stretchr/testify v1.8.1
 	github.com/urfave/cli/v2 v2.23.7
