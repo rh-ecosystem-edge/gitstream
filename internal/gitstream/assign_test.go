@@ -309,6 +309,87 @@ reviewers:
 		assert.Contains(t, err.Error(), "could not list open issues")
 	})
 
+	t.Run("do nothing if the issue is already assigned", func(t *testing.T) {
+
+		var (
+			ctx = context.Background()
+		)
+
+		expectedContent := &github.RepositoryContent{
+			Encoding: &encoding,
+			Content:  &encodedContent,
+		}
+
+		c := mock.NewMockedHTTPClient(
+			mock.WithRequestMatchHandler(
+				mock.GetReposContentsByOwnerByRepoByPath,
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					assert.Contains(t, r.URL.Path, "OWNERS")
+					assert.NoError(
+						t,
+						json.NewEncoder(w).Encode(expectedContent),
+					)
+				}),
+			),
+		)
+
+		gc := github.NewClient(c)
+		ctrl := gomock.NewController(t)
+
+		mockFinder := markup.NewMockFinder(ctrl)
+		mockGitHelper := gitutils.NewMockHelper(ctrl)
+		mockIssueHelper := gh.NewMockIssueHelper(ctrl)
+		mockUserHelper := gh.NewMockUserHelper(ctrl)
+
+		ghRepoName := &gh.RepoName{
+			Owner: repoOwner,
+			Repo:  repoName,
+		}
+
+		upstreamConfig := config.Upstream{
+			Ref: upstreamMainBranch,
+			URL: upstreamURL,
+		}
+
+		a := Assign{
+			GC:             gc,
+			DryRun:         false,
+			Finder:         mockFinder,
+			GitHelper:      mockGitHelper,
+			Logger:         logr.Discard(),
+			IssueHelper:    mockIssueHelper,
+			UserHelper:     mockUserHelper,
+			Repo:           test.NewRepo(t),
+			RepoName:       ghRepoName,
+			UpstreamConfig: upstreamConfig,
+		}
+
+		var (
+			issueNumber = 123
+			issueURL    = "some url"
+			body        = "some body"
+			login       = "user1"
+		)
+		issues := []*github.Issue{
+			{
+				Number:  &issueNumber,
+				HTMLURL: &issueURL,
+				Body:    &body,
+				Assignees: []*github.User{
+					{
+						Login: &login,
+					},
+				},
+			},
+		}
+		gomock.InOrder(
+			mockIssueHelper.EXPECT().ListAllOpen(ctx, true).Return(issues, nil),
+		)
+
+		err := a.assignIssues(ctx)
+		assert.NoError(t, err)
+	})
+
 	t.Run("failed to find SHAs", func(t *testing.T) {
 
 		var (

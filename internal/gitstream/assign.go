@@ -82,6 +82,11 @@ func (a *Assign) assignIssues(ctx context.Context) error {
 	for _, issue := range issues {
 
 		logger := a.Logger.WithValues("url", *issue.HTMLURL)
+
+		if len(issue.Assignees) > 0 {
+			continue
+		}
+
 		logger.Info("Processing issue")
 
 		shas, err := a.Finder.FindSHAs(*issue.Body)
