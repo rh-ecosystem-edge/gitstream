@@ -1,7 +1,6 @@
 package gitstream
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,38 +8,62 @@ import (
 
 func TestOwners_getAssignee(t *testing.T) {
 
-	ctx := context.Background()
+	const (
+		approver    = "user1"
+		nonApprover = "user2"
+	)
 
 	owners := &Owners{
 		Approvers: []string{
-			"user1",
+			approver,
 		},
-		Reviewers: []string{
-			"user1",
-			"user2",
-		},
-		Component: "Kernel Module Management",
+		Component: "Some Component",
 	}
 
-	t.Run("user is an approver", func(t *testing.T) {
+	t.Run("user not found", func(t *testing.T) {
 
-		var userLogin = "user1"
+		res := owners.contains(nonApprover)
+		assert.False(t, res)
+	})
 
-		assignee, err := owners.getAssignee(ctx, nil, userLogin)
+	t.Run("user found", func(t *testing.T) {
 
-		assert.NoError(t, err)
-		assert.Equal(t, assignee, userLogin)
+		res := owners.contains(approver)
+		assert.True(t, res)
+	})
+}
+
+func TestOwners_getRandomAssignee(t *testing.T) {
+
+	const (
+		approver = "user1"
+	)
+
+	t.Run("empty owners file", func(t *testing.T) {
+
+		owners := &Owners{
+			Approvers: []string{},
+			Component: "Some Component",
+		}
+
+		_, err := owners.getRandom()
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "There is no approvers in the", "file")
 	})
 
 	t.Run("user is not an approver, a random approver is picked", func(t *testing.T) {
 
-		var (
-			anonymousUserLogin = "jdoe"
-		)
+		owners := &Owners{
+			Approvers: []string{
+				approver,
+			},
+			Component: "Some Component",
+		}
 
-		assignee, err := owners.getAssignee(ctx, nil, anonymousUserLogin)
+		assignee, err := owners.getRandom()
 
 		assert.NoError(t, err)
-		assert.NotEqual(t, anonymousUserLogin, assignee)
+		assert.Equal(t, assignee, approver)
 	})
 }

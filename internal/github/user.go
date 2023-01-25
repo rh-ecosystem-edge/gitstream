@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -27,15 +28,17 @@ func NewUserHelper(gc *github.Client, repoName *RepoName) UserHelper {
 	}
 }
 
+var ErrUnexpectedReply = errors.New("the users search result are incoclusive")
+
 func (uh *UserHelperImpl) GetUser(ctx context.Context, commit *object.Commit) (*github.User, error) {
 
 	email := commit.Author.Email
 	userSearchRes, _, err := uh.gc.Search.Users(ctx, email, nil)
 	if err != nil {
-		return nil, fmt.Errorf("could not get user from email %s: %v", email, err)
+		return nil, fmt.Errorf("failed to get user %s: %v", email, err)
 	}
 	if len(userSearchRes.Users) != 1 {
-		return nil, fmt.Errorf("there is more than 1 user associated with %s: %v", email, err)
+		return nil, ErrUnexpectedReply
 	}
 	return userSearchRes.Users[0], nil
 }
