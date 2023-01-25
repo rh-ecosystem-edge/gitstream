@@ -461,8 +461,9 @@ reviewers:
 			},
 		}
 
-		hash := plumbing.NewHash("1167d3564b3f54ee1fca996572021f0206bb3ba9")
-		hashes := []plumbing.Hash{hash}
+		ref, err := repo.Head()
+		assert.NoError(t, err)
+		hashes := []plumbing.Hash{ref.Hash()}
 
 		gomock.InOrder(
 			mockIssueHelper.EXPECT().ListAllOpen(ctx, true).Return(issues, nil),
@@ -470,7 +471,7 @@ reviewers:
 			mockUserHelper.EXPECT().GetUser(ctx, gomock.Any()).Return(nil, errors.New("some error")),
 		)
 
-		err := a.assignIssues(ctx)
+		err = a.assignIssues(ctx)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "could not get the upstream commit author for downstream issue")
 	})
@@ -545,8 +546,9 @@ reviewers:
 			},
 		}
 
-		hash := plumbing.NewHash("1167d3564b3f54ee1fca996572021f0206bb3ba9")
-		hashes := []plumbing.Hash{hash}
+		ref, err := repo.Head()
+		assert.NoError(t, err)
+		hashes := []plumbing.Hash{ref.Hash()}
 
 		user := &github.User{
 			Login: &userLogin,
@@ -559,7 +561,7 @@ reviewers:
 			mockIssueHelper.EXPECT().Assign(ctx, issues[0], userLogin).Return(errors.New("error")),
 		)
 
-		err := a.assignIssues(ctx)
+		err = a.assignIssues(ctx)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "could not assign issue")
 	})
@@ -634,8 +636,9 @@ reviewers:
 			},
 		}
 
-		hash := plumbing.NewHash("1167d3564b3f54ee1fca996572021f0206bb3ba9")
-		hashes := []plumbing.Hash{hash}
+		ref, err := repo.Head()
+		assert.NoError(t, err)
+		hashes := []plumbing.Hash{ref.Hash()}
 
 		user := &github.User{
 			Login: &userLogin,
@@ -648,7 +651,7 @@ reviewers:
 			mockIssueHelper.EXPECT().Assign(ctx, issues[0], userLogin).Return(nil),
 		)
 
-		err := a.assignIssues(ctx)
+		err = a.assignIssues(ctx)
 		assert.NoError(t, err)
 	})
 }
