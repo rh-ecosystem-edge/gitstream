@@ -551,6 +551,7 @@ reviewers:
 			mockIssueHelper.EXPECT().ListAllOpen(ctx, true).Return(issues, nil),
 			mockFinder.EXPECT().FindSHAs(gomock.Any()).Return(hashes, nil),
 			mockUserHelper.EXPECT().GetUser(ctx, gomock.Any()).Return(nil, errors.New("some error")),
+			mockIssueHelper.EXPECT().Assign(ctx, issues[0], gomock.Any()).Return(nil),
 		)
 
 		err = a.assignIssues(ctx)

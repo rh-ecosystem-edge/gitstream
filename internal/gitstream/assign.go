@@ -108,12 +108,17 @@ func (a *Assign) assignIssues(ctx context.Context) error {
 
 			logger.Info("Assigning issue")
 
+			var userLogin string
 			user, err := a.UserHelper.GetUser(ctx, upstreamCommit)
 			if err != nil {
-				return fmt.Errorf("could not get the upstream commit author for downstream issue %d: %v", *issue.Number, err)
+				logger.Info("WARNING: could not get the upstream commit author for downstream issue, picking a random assignee",
+					"issue", *issue.Number)
+				userLogin = "notanowner"
+			} else {
+				userLogin = *user.Login
 			}
 
-			assignee, err := owners.getAssignee(ctx, a.GC, *user.Login)
+			assignee, err := owners.getAssignee(ctx, a.GC, userLogin)
 			if err != nil {
 				return fmt.Errorf("could not get select a suitable assignee: %v", err)
 			}
