@@ -17,7 +17,7 @@ import (
 )
 
 func TestDifferImpl_GetMissingCommits(t *testing.T) {
-	repo := test.CloneCurrentRepo(t)
+	repo := test.NewRepo(t)
 
 	ctrl := gomock.NewController(t)
 
@@ -47,31 +47,34 @@ func TestDifferImpl_GetMissingCommits(t *testing.T) {
 
 	ctx := context.Background()
 
+	// upstream repo has 4 commits
+	hash0, _ := test.AddEmptyCommit(t, repo, "commit 0")
+	hash1, _ := test.AddEmptyCommit(t, repo, "commit 1")
+	hash2, _ := test.AddEmptyCommit(t, repo, "commit 2")
+
+	_, missingCommit := test.AddEmptyCommit(t, repo, "commit 3")
+
+	// downstream has 3, brnch main points to hash2
+	dsMainRef := plumbing.NewHashReference(plumbing.NewBranchReferenceName(dsMainBranch), hash2)
+
+	// commit 3 is missing from downstream
+
 	head, err := repo.Head()
 	require.NoError(t, err)
-
-	// First 3 commits of this repo
-	logHash := plumbing.NewHash("e3229f3c533ed51070beff092e5c7694a8ee81f0")
-	issueHash := plumbing.NewHash("9c08d42326af62aa0f8cea021c4d37971606148f")
-	prHash := plumbing.NewHash("4159d2e86cc72a321de2ac0585952ddd5aa95039")
-
-	// random hash
-	dsMainHash := plumbing.NewHash("2cbad39aaf3854c020d2b969df3f795f5ba109ba")
-	dsMainRef := plumbing.NewHashReference(plumbing.NewBranchReferenceName(dsMainBranch), dsMainHash)
 
 	gomock.InOrder(
 		helper.EXPECT().GetBranchRef(ctx, dsMainBranch).Return(dsMainRef, nil),
 		ig.
 			EXPECT().
-			FromLocalGitRepo(ctx, repo, dsMainHash, &since).
-			Return(intents.CommitIntents{logHash: "commit from log"}, nil),
+			FromLocalGitRepo(ctx, repo, hash2, &since).
+			Return(intents.CommitIntents{hash0: "commit from log"}, nil),
 		ig.
 			EXPECT().
 			FromGitHubIssues(ctx, &repoName).
 			Return(
 				intents.CommitIntents{
-					issueHash: "commit from issue",
-					prHash:    "commit from PR",
+					hash1: "commit from issue",
+					hash2: "commit from PR",
 				},
 				nil),
 		helper.EXPECT().RecreateRemote(ctx, remoteName, remoteURL),
@@ -81,17 +84,6 @@ func TestDifferImpl_GetMissingCommits(t *testing.T) {
 	commits, err := di.GetMissingCommits(context.Background(), repo, &repoName, &since, dsMainBranch, usCfg)
 	assert.NoError(t, err)
 
-	assert.NotEmpty(t, commits)
-
-	// make a set for faster lookups
-	set := make(map[plumbing.Hash]struct{})
-
-	for _, c := range commits {
-		set[c.Hash] = struct{}{}
-	}
-
-	assert.Contains(t, set, plumbing.NewHash("d36f7b79606934161431b255dd22158f5b903579")) // 4th commit of this repo
-	assert.NotContains(t, set, logHash)
-	assert.NotContains(t, set, issueHash)
-	assert.NotContains(t, set, prHash)
+	assert.Len(t, commits, 1)
+	assert.Contains(t, commits, missingCommit)
 }

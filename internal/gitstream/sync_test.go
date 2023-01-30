@@ -17,6 +17,7 @@ import (
 	"github.com/qbarrand/gitstream/internal/gitutils"
 	"github.com/qbarrand/gitstream/internal/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSync_Run(t *testing.T) {
@@ -42,7 +43,21 @@ func TestSync_Run(t *testing.T) {
 
 	ctx := context.Background()
 
-	repo, _ := test.CloneCurrentRepoWithFS(t)
+	repo := test.NewRepo(t)
+	sha, _ := test.AddEmptyCommit(t, repo, "test commit")
+
+	for _, name := range []string{upstreamMainBranch, downstreamMainBranch} {
+		ref := plumbing.NewHashReference(
+			plumbing.NewBranchReferenceName(name),
+			sha,
+		)
+
+		require.NoError(
+			t,
+			repo.Storer.SetReference(ref),
+		)
+	}
+
 	ghRepoName := gh.RepoName{
 		Owner: repoOwner,
 		Repo:  repoName,
