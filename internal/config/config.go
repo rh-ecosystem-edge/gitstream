@@ -11,11 +11,12 @@ import (
 )
 
 type Downstream struct {
-	CreateDraftPRs bool   `yaml:"create_draft_prs"`
-	GitHubRepoName string `yaml:"github_repo_name"`
-	LocalRepoPath  string `yaml:"local_repo_path" default:"."`
-	MainBranch     string `yaml:"main_branch" default:"main"`
-	MaxOpenItems   int    `yaml:"max_open_items" default:"-1"`
+	CreateDraftPRs bool     `yaml:"create_draft_prs"`
+	GitHubRepoName string   `yaml:"github_repo_name"`
+	LocalRepoPath  string   `yaml:"local_repo_path" default:"."`
+	MainBranch     string   `yaml:"main_branch" default:"main"`
+	MaxOpenItems   int      `yaml:"max_open_items" default:"-1"`
+	IgnoreAuthors  []string `yaml:"ignore_authors"`
 }
 
 type Diff struct {

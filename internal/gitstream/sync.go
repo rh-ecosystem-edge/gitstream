@@ -84,6 +84,7 @@ func (s *Sync) Run(ctx context.Context) error {
 	}
 
 	canBeCreated := maxItems - existingOpenIssues
+	ignoreAuthors := makeStringSet(s.DownstreamConfig.IgnoreAuthors)
 
 	for _, c := range commits {
 		select {
@@ -100,6 +101,11 @@ func (s *Sync) Run(ctx context.Context) error {
 			)
 
 			return nil
+		}
+
+		if _, ok := ignoreAuthors[c.Author.Name]; ok {
+			s.Logger.Info("Skipping ignored author", "name", c.Author.Name)
+			continue
 		}
 
 		canBeCreated--
@@ -175,6 +181,17 @@ func (s *Sync) Run(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func makeStringSet(strs []string) map[string]struct{} {
+
+	stringSet := make(map[string]struct{}, len(strs))
+	for _, str := range strs {
+		if _, ok := stringSet[str]; !ok {
+			stringSet[str] = struct{}{}
+		}
+	}
+	return stringSet
 }
 
 func (s *Sync) cherryPick(ctx context.Context, commit *object.Commit, branchName string, logger logr.Logger) error {
