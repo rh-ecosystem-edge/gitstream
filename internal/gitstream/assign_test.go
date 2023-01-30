@@ -52,7 +52,6 @@ func TestAssign_getOwnersContent(t *testing.T) {
 		mockIssueHelper := gh.NewMockIssueHelper(ctrl)
 		mockUserHelper := gh.NewMockUserHelper(ctrl)
 
-		repo, _ := test.CloneCurrentRepoWithFS(t)
 		ghRepoName := &gh.RepoName{
 			Owner: repoOwner,
 			Repo:  repoName,
@@ -71,7 +70,7 @@ func TestAssign_getOwnersContent(t *testing.T) {
 			Logger:         logr.Discard(),
 			IssueHelper:    mockIssueHelper,
 			UserHelper:     mockUserHelper,
-			Repo:           repo,
+			Repo:           test.NewRepo(t),
 			RepoName:       ghRepoName,
 			UpstreamConfig: upstreamConfig,
 		}
@@ -115,7 +114,6 @@ func TestAssign_getOwnersContent(t *testing.T) {
 		mockIssueHelper := gh.NewMockIssueHelper(ctrl)
 		mockUserHelper := gh.NewMockUserHelper(ctrl)
 
-		repo, _ := test.CloneCurrentRepoWithFS(t)
 		ghRepoName := &gh.RepoName{
 			Owner: repoOwner,
 			Repo:  repoName,
@@ -134,7 +132,7 @@ func TestAssign_getOwnersContent(t *testing.T) {
 			Logger:         logr.Discard(),
 			IssueHelper:    mockIssueHelper,
 			UserHelper:     mockUserHelper,
-			Repo:           repo,
+			Repo:           test.NewRepo(t),
 			RepoName:       ghRepoName,
 			UpstreamConfig: upstreamConfig,
 		}
@@ -185,7 +183,6 @@ reviewers:
 		mockIssueHelper := gh.NewMockIssueHelper(ctrl)
 		mockUserHelper := gh.NewMockUserHelper(ctrl)
 
-		repo, _ := test.CloneCurrentRepoWithFS(t)
 		ghRepoName := &gh.RepoName{
 			Owner: repoOwner,
 			Repo:  repoName,
@@ -204,7 +201,7 @@ reviewers:
 			Logger:         logr.Discard(),
 			IssueHelper:    mockIssueHelper,
 			UserHelper:     mockUserHelper,
-			Repo:           repo,
+			Repo:           test.NewRepo(t),
 			RepoName:       ghRepoName,
 			UpstreamConfig: upstreamConfig,
 		}
@@ -280,7 +277,6 @@ reviewers:
 		mockIssueHelper := gh.NewMockIssueHelper(ctrl)
 		mockUserHelper := gh.NewMockUserHelper(ctrl)
 
-		repo, _ := test.CloneCurrentRepoWithFS(t)
 		ghRepoName := &gh.RepoName{
 			Owner: repoOwner,
 			Repo:  repoName,
@@ -299,7 +295,7 @@ reviewers:
 			Logger:         logr.Discard(),
 			IssueHelper:    mockIssueHelper,
 			UserHelper:     mockUserHelper,
-			Repo:           repo,
+			Repo:           test.NewRepo(t),
 			RepoName:       ghRepoName,
 			UpstreamConfig: upstreamConfig,
 		}
@@ -345,7 +341,6 @@ reviewers:
 		mockIssueHelper := gh.NewMockIssueHelper(ctrl)
 		mockUserHelper := gh.NewMockUserHelper(ctrl)
 
-		repo, _ := test.CloneCurrentRepoWithFS(t)
 		ghRepoName := &gh.RepoName{
 			Owner: repoOwner,
 			Repo:  repoName,
@@ -364,7 +359,7 @@ reviewers:
 			Logger:         logr.Discard(),
 			IssueHelper:    mockIssueHelper,
 			UserHelper:     mockUserHelper,
-			Repo:           repo,
+			Repo:           test.NewRepo(t),
 			RepoName:       ghRepoName,
 			UpstreamConfig: upstreamConfig,
 		}
@@ -424,7 +419,7 @@ reviewers:
 		mockIssueHelper := gh.NewMockIssueHelper(ctrl)
 		mockUserHelper := gh.NewMockUserHelper(ctrl)
 
-		repo, _ := test.CloneCurrentRepoWithFS(t)
+		repo := test.NewRepo(t)
 		ghRepoName := &gh.RepoName{
 			Owner: repoOwner,
 			Repo:  repoName,
@@ -461,13 +456,12 @@ reviewers:
 			},
 		}
 
-		hash := plumbing.NewHash("1167d3564b3f54ee1fca996572021f0206bb3ba9")
-		hashes := []plumbing.Hash{hash}
+		sha, commit := test.AddEmptyCommit(t, repo, "empty")
 
 		gomock.InOrder(
 			mockIssueHelper.EXPECT().ListAllOpen(ctx, true).Return(issues, nil),
-			mockFinder.EXPECT().FindSHAs(gomock.Any()).Return(hashes, nil),
-			mockUserHelper.EXPECT().GetUser(ctx, gomock.Any()).Return(nil, errors.New("some error")),
+			mockFinder.EXPECT().FindSHAs(body).Return([]plumbing.Hash{sha}, nil),
+			mockUserHelper.EXPECT().GetUser(ctx, commit).Return(nil, errors.New("some error")),
 		)
 
 		err := a.assignIssues(ctx)
@@ -507,7 +501,7 @@ reviewers:
 		mockIssueHelper := gh.NewMockIssueHelper(ctrl)
 		mockUserHelper := gh.NewMockUserHelper(ctrl)
 
-		repo, _ := test.CloneCurrentRepoWithFS(t)
+		repo := test.NewRepo(t)
 		ghRepoName := &gh.RepoName{
 			Owner: repoOwner,
 			Repo:  repoName,
@@ -545,17 +539,16 @@ reviewers:
 			},
 		}
 
-		hash := plumbing.NewHash("1167d3564b3f54ee1fca996572021f0206bb3ba9")
-		hashes := []plumbing.Hash{hash}
-
 		user := &github.User{
 			Login: &userLogin,
 		}
 
+		sha, commit := test.AddEmptyCommit(t, repo, "empty")
+
 		gomock.InOrder(
 			mockIssueHelper.EXPECT().ListAllOpen(ctx, true).Return(issues, nil),
-			mockFinder.EXPECT().FindSHAs(gomock.Any()).Return(hashes, nil),
-			mockUserHelper.EXPECT().GetUser(ctx, gomock.Any()).Return(user, nil),
+			mockFinder.EXPECT().FindSHAs(body).Return([]plumbing.Hash{sha}, nil),
+			mockUserHelper.EXPECT().GetUser(ctx, commit).Return(user, nil),
 			mockIssueHelper.EXPECT().Assign(ctx, issues[0], userLogin).Return(errors.New("error")),
 		)
 
@@ -596,7 +589,7 @@ reviewers:
 		mockIssueHelper := gh.NewMockIssueHelper(ctrl)
 		mockUserHelper := gh.NewMockUserHelper(ctrl)
 
-		repo, _ := test.CloneCurrentRepoWithFS(t)
+		repo := test.NewRepo(t)
 		ghRepoName := &gh.RepoName{
 			Owner: repoOwner,
 			Repo:  repoName,
@@ -634,17 +627,16 @@ reviewers:
 			},
 		}
 
-		hash := plumbing.NewHash("1167d3564b3f54ee1fca996572021f0206bb3ba9")
-		hashes := []plumbing.Hash{hash}
-
 		user := &github.User{
 			Login: &userLogin,
 		}
 
+		sha, commit := test.AddEmptyCommit(t, repo, "empty")
+
 		gomock.InOrder(
 			mockIssueHelper.EXPECT().ListAllOpen(ctx, true).Return(issues, nil),
-			mockFinder.EXPECT().FindSHAs(gomock.Any()).Return(hashes, nil),
-			mockUserHelper.EXPECT().GetUser(ctx, gomock.Any()).Return(user, nil),
+			mockFinder.EXPECT().FindSHAs(body).Return([]plumbing.Hash{sha}, nil),
+			mockUserHelper.EXPECT().GetUser(ctx, commit).Return(user, nil),
 			mockIssueHelper.EXPECT().Assign(ctx, issues[0], userLogin).Return(nil),
 		)
 

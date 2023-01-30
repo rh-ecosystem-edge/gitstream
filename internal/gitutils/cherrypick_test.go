@@ -42,7 +42,7 @@ func TestCherryPickerImpl_Run(t *testing.T) {
 
 	ctx := context.Background()
 
-	repo, fs := test.CloneCurrentRepoWithFS(t)
+	repo, fs := test.NewRepoWithFS(t)
 
 	commit := &object.Commit{
 		Hash:    plumbing.NewHash(sha),
