@@ -11,6 +11,7 @@ import (
 )
 
 func main() {
+	//comment
 	logger := stdr.New(
 		log.New(os.Stdout, "", log.Lshortfile),
 	)
