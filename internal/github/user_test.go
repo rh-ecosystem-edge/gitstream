@@ -35,14 +35,14 @@ func TestUserHelperImpl_GetUser(t *testing.T) {
 		},
 	}
 
-	t.Run("could not get github user", func(t *testing.T) {
+	t.Run("Github API error", func(t *testing.T) {
 
 		c := mock.NewMockedHTTPClient(
 			mock.WithRequestMatchHandler(
 				mock.GetSearchUsers,
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					assert.Equal(t, authorEmail, r.URL.Query().Get("q"))
-					w.WriteHeader(http.StatusBadRequest)
+					w.WriteHeader(http.StatusServiceUnavailable)
 				}),
 			),
 		)
@@ -52,20 +52,13 @@ func TestUserHelperImpl_GetUser(t *testing.T) {
 		_, err := gh.NewUserHelper(gc, &gh.RepoName{Owner: owner, Repo: repo}).GetUser(ctx, commit)
 
 		assert.Error(t, err)
-		assert.ErrorContains(t, err, "could not get user from email")
+		assert.ErrorContains(t, err, "failed to get user")
 	})
 
-	t.Run("there is more than 1 user associated with the commit author eamil", func(t *testing.T) {
+	t.Run("user not found", func(t *testing.T) {
 
 		userSearchRes := &github.UsersSearchResult{
-			Users: []*github.User{
-				{
-					Login: &authorLogin,
-				},
-				{
-					Login: &authorLogin,
-				},
-			},
+			Users: []*github.User{},
 		}
 
 		c := mock.NewMockedHTTPClient(
@@ -86,7 +79,7 @@ func TestUserHelperImpl_GetUser(t *testing.T) {
 		_, err := gh.NewUserHelper(gc, &gh.RepoName{Owner: owner, Repo: repo}).GetUser(ctx, commit)
 
 		assert.Error(t, err)
-		assert.ErrorContains(t, err, "there is more than 1 user associated with")
+		assert.ErrorIs(t, err, gh.ErrUnexpectedReply)
 	})
 
 	t.Run("working as expected", func(t *testing.T) {

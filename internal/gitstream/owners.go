@@ -1,10 +1,10 @@
 package gitstream
 
 import (
-	"context"
+	"fmt"
 	"math/rand"
 
-	"github.com/google/go-github/v47/github"
+	"golang.org/x/exp/slices"
 )
 
 type Owners struct {
@@ -13,15 +13,20 @@ type Owners struct {
 	Component string   `yaml:"component"`
 }
 
-func (o *Owners) getAssignee(ctx context.Context, gc *github.Client, userLogin string) (string, error) {
+func (o *Owners) contains(userLogin string) bool {
 
-	for _, approver := range o.Approvers {
-		if approver == userLogin {
-			return userLogin, nil
-		}
+	return slices.Contains(o.Approvers, userLogin)
+}
+
+func (o *Owners) getRandom() (string, error) {
+
+	numApprovers := len(o.Approvers)
+
+	// rand.Intn will panic if the operrand is <= 0
+	if numApprovers <= 0 {
+		return "", fmt.Errorf("There is no approvers in the %s file", ownersFile)
 	}
 
-	// User isn't in m/s OWNER file, select a random owner
 	rand := rand.Intn(len(o.Approvers))
 	return o.Approvers[rand], nil
 }

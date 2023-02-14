@@ -2,6 +2,7 @@ package gitstream
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-git/go-git/v5"
@@ -14,6 +15,8 @@ import (
 	"github.com/qbarrand/gitstream/internal/markup"
 	"gopkg.in/yaml.v3"
 )
+
+const ownersFile = "OWNERS"
 
 type Assign struct {
 	GC             *github.Client
@@ -48,20 +51,18 @@ func (a *Assign) Run(ctx context.Context) error {
 
 func (a *Assign) getOwnersContent(ctx context.Context) (*Owners, error) {
 
-	const filePath = "OWNERS"
-
-	content, _, _, err := a.GC.Repositories.GetContents(ctx, a.RepoName.Owner, a.RepoName.Repo, filePath, nil)
+	content, _, _, err := a.GC.Repositories.GetContents(ctx, a.RepoName.Owner, a.RepoName.Repo, ownersFile, nil)
 	if err != nil || content == nil { // `content` can be nil if the filePath refers to a directory
-		return nil, fmt.Errorf("could not get %s's content from %s/%s: %v", filePath, a.RepoName.Owner, a.RepoName.Repo, err)
+		return nil, fmt.Errorf("could not get %s's content from %s/%s: %v", ownersFile, a.RepoName.Owner, a.RepoName.Repo, err)
 	}
 	data, err := content.GetContent()
 	if err != nil {
-		return nil, fmt.Errorf("%s's data is invalid: %v", filePath, err)
+		return nil, fmt.Errorf("%s's data is invalid: %v", ownersFile, err)
 	}
 
 	var owners Owners
 	if err := yaml.Unmarshal([]byte(data), &owners); err != nil {
-		return nil, fmt.Errorf("could not unmarshal %s as a yaml: %v", filePath, err)
+		return nil, fmt.Errorf("could not unmarshal %s as a yaml: %v", ownersFile, err)
 	}
 
 	return &owners, nil
@@ -108,14 +109,33 @@ func (a *Assign) assignIssues(ctx context.Context) error {
 
 			logger.Info("Assigning issue")
 
-			user, err := a.UserHelper.GetUser(ctx, upstreamCommit)
-			if err != nil {
-				return fmt.Errorf("could not get the upstream commit author for downstream issue %d: %v", *issue.Number, err)
-			}
-
-			assignee, err := owners.getAssignee(ctx, a.GC, *user.Login)
-			if err != nil {
-				return fmt.Errorf("could not get select a suitable assignee: %v", err)
+			var (
+				assignee string
+				intErr   error
+			)
+			if user, err := a.UserHelper.GetUser(ctx, upstreamCommit); err != nil {
+				if !errors.Is(err, gh.ErrUnexpectedReply) {
+					logger.Info("WARNING: failed to get a response from Github, skipping commit",
+						"issue", *issue.Number, "error", gh.ErrUnexpectedReply)
+					continue
+				}
+				logger.Info("WARNING: commit author for downstream issue not found on github, picking a random assignee",
+					"issue", *issue.Number, "error", err.Error())
+				assignee, intErr = owners.getRandom()
+				if intErr != nil {
+					return fmt.Errorf("could not get a random owner: %v", err)
+				}
+			} else {
+				if owners.contains(*user.Login) {
+					assignee = *user.Login
+				} else {
+					logger.Info("commit author for downstream issue is not an owner, picking a random assignee",
+						"issue", *issue.Number)
+					assignee, intErr = owners.getRandom()
+					if intErr != nil {
+						return fmt.Errorf("could not get a random owner: %v", err)
+					}
+				}
 			}
 
 			if err := a.IssueHelper.Assign(ctx, issue, assignee); err != nil {
