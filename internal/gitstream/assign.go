@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-logr/logr"
@@ -13,22 +14,22 @@ import (
 	gh "github.com/qbarrand/gitstream/internal/github"
 	"github.com/qbarrand/gitstream/internal/gitutils"
 	"github.com/qbarrand/gitstream/internal/markup"
-	"gopkg.in/yaml.v3"
+	"github.com/qbarrand/gitstream/internal/owners"
 )
 
-const ownersFile = "OWNERS"
-
 type Assign struct {
-	GC             *github.Client
-	DryRun         bool
-	Finder         markup.Finder
-	GitHelper      gitutils.Helper
-	Logger         logr.Logger
-	IssueHelper    gh.IssueHelper
-	UserHelper     gh.UserHelper
-	Repo           *git.Repository
-	RepoName       *gh.RepoName
-	UpstreamConfig config.Upstream
+	GC               *github.Client
+	DryRun           bool
+	Finder           markup.Finder
+	GitHelper        gitutils.Helper
+	Logger           logr.Logger
+	IssueHelper      gh.IssueHelper
+	UserHelper       gh.UserHelper
+	Repo             *git.Repository
+	RepoName         *gh.RepoName
+	UpstreamConfig   config.Upstream
+	DownstreamConfig config.Downstream
+	OwnersHelper     owners.OwnersHelper
 }
 
 func (a *Assign) Run(ctx context.Context) error {
@@ -49,30 +50,12 @@ func (a *Assign) Run(ctx context.Context) error {
 	return nil
 }
 
-func (a *Assign) getOwnersContent(ctx context.Context) (*Owners, error) {
-
-	content, _, _, err := a.GC.Repositories.GetContents(ctx, a.RepoName.Owner, a.RepoName.Repo, ownersFile, nil)
-	if err != nil || content == nil { // `content` can be nil if the filePath refers to a directory
-		return nil, fmt.Errorf("could not get %s's content from %s/%s: %v", ownersFile, a.RepoName.Owner, a.RepoName.Repo, err)
-	}
-	data, err := content.GetContent()
-	if err != nil {
-		return nil, fmt.Errorf("%s's data is invalid: %v", ownersFile, err)
-	}
-
-	var owners Owners
-	if err := yaml.Unmarshal([]byte(data), &owners); err != nil {
-		return nil, fmt.Errorf("could not unmarshal %s as a yaml: %v", ownersFile, err)
-	}
-
-	return &owners, nil
-}
-
 func (a *Assign) assignIssues(ctx context.Context) error {
 
-	owners, err := a.getOwnersContent(ctx)
+	ownersFile := path.Join(a.DownstreamConfig.LocalRepoPath, a.DownstreamConfig.OwnersFile)
+	owners, err := a.OwnersHelper.FromFile(ownersFile)
 	if err != nil {
-		return fmt.Errorf("could not get owners content: %v", err)
+		return fmt.Errorf("could not get owners from file %s: %v", ownersFile, err)
 	}
 
 	issues, err := a.IssueHelper.ListAllOpen(ctx, true)
@@ -116,17 +99,17 @@ func (a *Assign) assignIssues(ctx context.Context) error {
 				}
 				logger.Info("WARNING: commit author for downstream issue not found on github, picking a random assignee",
 					"issue", *issue.Number, "error", err.Error())
-				assignee, intErr = owners.getRandom()
+				assignee, intErr = a.OwnersHelper.GetRandomApprover(owners)
 				if intErr != nil {
 					return fmt.Errorf("could not get a random owner: %v", err)
 				}
 			} else {
-				if owners.contains(*user.Login) {
+				if a.OwnersHelper.IsApprover(owners, *user.Login) {
 					assignee = *user.Login
 				} else {
 					logger.Info("commit author for downstream issue is not an owner, picking a random assignee",
 						"issue", *issue.Number)
-					assignee, intErr = owners.getRandom()
+					assignee, intErr = a.OwnersHelper.GetRandomApprover(owners)
 					if intErr != nil {
 						return fmt.Errorf("could not get a random owner: %v", err)
 					}

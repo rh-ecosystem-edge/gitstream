@@ -17,6 +17,7 @@ type Downstream struct {
 	MainBranch     string   `yaml:"main_branch" default:"main"`
 	MaxOpenItems   int      `yaml:"max_open_items" default:"-1"`
 	IgnoreAuthors  []string `yaml:"ignore_authors"`
+	OwnersFile     string   `yaml:"owners_file" default:"OWNERS"`
 }
 
 type Diff struct {

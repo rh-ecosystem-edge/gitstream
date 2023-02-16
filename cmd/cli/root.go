@@ -17,6 +17,7 @@ import (
 	"github.com/qbarrand/gitstream/internal/gitutils"
 	"github.com/qbarrand/gitstream/internal/intents"
 	"github.com/qbarrand/gitstream/internal/markup"
+	"github.com/qbarrand/gitstream/internal/owners"
 	"github.com/urfave/cli/v2"
 )
 
@@ -330,16 +331,18 @@ func (a *App) assign(c *cli.Context) error {
 	}
 
 	u := gitstream.Assign{
-		GC:             gc,
-		DryRun:         c.Bool("dry-run"),
-		Finder:         finder,
-		GitHelper:      gitutils.NewHelper(repo, a.Logger),
-		Logger:         a.Logger,
-		IssueHelper:    gh.NewIssueHelper(gc, a.Config.CommitMarkup, repoName),
-		UserHelper:     gh.NewUserHelper(gc, repoName),
-		Repo:           repo,
-		RepoName:       repoName,
-		UpstreamConfig: a.Config.Upstream,
+		GC:               gc,
+		DryRun:           c.Bool("dry-run"),
+		Finder:           finder,
+		GitHelper:        gitutils.NewHelper(repo, a.Logger),
+		Logger:           a.Logger,
+		IssueHelper:      gh.NewIssueHelper(gc, a.Config.CommitMarkup, repoName),
+		UserHelper:       gh.NewUserHelper(gc, repoName),
+		Repo:             repo,
+		RepoName:         repoName,
+		UpstreamConfig:   a.Config.Upstream,
+		DownstreamConfig: a.Config.Downstream,
+		OwnersHelper:     owners.NewOwnersHelper(),
 	}
 
 	return u.Run(ctx)
