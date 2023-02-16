@@ -97,11 +97,6 @@ func (a *Assign) assignIssues(ctx context.Context) error {
 
 		for _, s := range shas {
 
-			upstreamCommit, err := a.Repo.CommitObject(s)
-			if err != nil {
-				return fmt.Errorf("could not find upstream commit %s: %v", s, err)
-			}
-
 			if a.DryRun {
 				logger.Info("Dry run: skipping issue update")
 				return nil
@@ -113,7 +108,7 @@ func (a *Assign) assignIssues(ctx context.Context) error {
 				assignee string
 				intErr   error
 			)
-			if user, err := a.UserHelper.GetUser(ctx, upstreamCommit); err != nil {
+			if user, err := a.UserHelper.GetCommitAuthor(ctx, s.String()); err != nil {
 				if !errors.Is(err, gh.ErrUnexpectedReply) {
 					logger.Info("WARNING: failed to get a response from Github, skipping commit",
 						"issue", *issue.Number, "error", gh.ErrUnexpectedReply)

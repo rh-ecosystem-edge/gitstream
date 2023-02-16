@@ -5,14 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/go-github/v47/github"
 )
 
 //go:generate mockgen -source=user.go -package=github -destination=mock_user.go
 
 type UserHelper interface {
-	GetUser(ctx context.Context, commit *object.Commit) (*github.User, error)
+	GetCommitAuthor(ctx context.Context, sha string) (*github.User, error)
 }
 
 type UserHelperImpl struct {
@@ -28,17 +27,17 @@ func NewUserHelper(gc *github.Client, repoName *RepoName) UserHelper {
 	}
 }
 
-var ErrUnexpectedReply = errors.New("the users search result are incoclusive")
+var ErrUnexpectedReply = errors.New("the number of found commits isn't exactly 1")
 
-func (uh *UserHelperImpl) GetUser(ctx context.Context, commit *object.Commit) (*github.User, error) {
+func (uh *UserHelperImpl) GetCommitAuthor(ctx context.Context, sha string) (*github.User, error) {
 
-	email := commit.Author.Email
-	userSearchRes, _, err := uh.gc.Search.Users(ctx, email, nil)
+	q := fmt.Sprintf("hash:%s repo:%s/%s", sha, uh.repoName.Owner, uh.repoName.Repo)
+	commitSearchRes, _, err := uh.gc.Search.Commits(ctx, q, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user %s: %v", email, err)
+		return nil, fmt.Errorf("failed to get commit %s: %v", sha, err)
 	}
-	if len(userSearchRes.Users) != 1 {
+	if len(commitSearchRes.Commits) != 1 {
 		return nil, ErrUnexpectedReply
 	}
-	return userSearchRes.Users[0], nil
+	return commitSearchRes.Commits[0].Author, nil
 }
