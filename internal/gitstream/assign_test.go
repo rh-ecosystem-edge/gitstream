@@ -537,19 +537,19 @@ reviewers:
 			},
 		}
 
-		sha, commit := test.AddEmptyCommit(t, repo, "empty")
+		sha, _ := test.AddEmptyCommit(t, repo, "empty")
 
 		gomock.InOrder(
 			mockIssueHelper.EXPECT().ListAllOpen(ctx, true).Return(issues, nil),
 			mockFinder.EXPECT().FindSHAs(body).Return([]plumbing.Hash{sha}, nil),
-			mockUserHelper.EXPECT().GetUser(ctx, commit).Return(nil, errors.New("some API error")),
+			mockUserHelper.EXPECT().GetCommitAuthor(ctx, sha.String()).Return(nil, errors.New("some API error")),
 		)
 
 		err := a.assignIssues(ctx)
 		assert.NoError(t, err)
 	})
 
-	t.Run("failed to get user, not found", func(t *testing.T) {
+	t.Run("failed to get user, commit not found", func(t *testing.T) {
 
 		var (
 			ctx = context.Background()
@@ -618,12 +618,12 @@ reviewers:
 			},
 		}
 
-		sha, commit := test.AddEmptyCommit(t, repo, "empty")
+		sha, _ := test.AddEmptyCommit(t, repo, "empty")
 
 		gomock.InOrder(
 			mockIssueHelper.EXPECT().ListAllOpen(ctx, true).Return(issues, nil),
 			mockFinder.EXPECT().FindSHAs(body).Return([]plumbing.Hash{sha}, nil),
-			mockUserHelper.EXPECT().GetUser(ctx, commit).Return(nil, gh.ErrUnexpectedReply),
+			mockUserHelper.EXPECT().GetCommitAuthor(ctx, sha.String()).Return(nil, gh.ErrUnexpectedReply),
 			mockIssueHelper.EXPECT().Assign(ctx, issues[0], gomock.Any()).Return(nil),
 		)
 
@@ -704,12 +704,12 @@ reviewers:
 			Login: &approver,
 		}
 
-		sha, commit := test.AddEmptyCommit(t, repo, "empty")
+		sha, _ := test.AddEmptyCommit(t, repo, "empty")
 
 		gomock.InOrder(
 			mockIssueHelper.EXPECT().ListAllOpen(ctx, true).Return(issues, nil),
 			mockFinder.EXPECT().FindSHAs(body).Return([]plumbing.Hash{sha}, nil),
-			mockUserHelper.EXPECT().GetUser(ctx, commit).Return(user, nil),
+			mockUserHelper.EXPECT().GetCommitAuthor(ctx, sha.String()).Return(user, nil),
 			mockIssueHelper.EXPECT().Assign(ctx, issues[0], approver).Return(nil),
 		)
 
@@ -791,12 +791,12 @@ reviewers:
 			Login: &nonApprover,
 		}
 
-		sha, commit := test.AddEmptyCommit(t, repo, "empty")
+		sha, _ := test.AddEmptyCommit(t, repo, "empty")
 
 		gomock.InOrder(
 			mockIssueHelper.EXPECT().ListAllOpen(ctx, true).Return(issues, nil),
 			mockFinder.EXPECT().FindSHAs(body).Return([]plumbing.Hash{sha}, nil),
-			mockUserHelper.EXPECT().GetUser(ctx, commit).Return(user, nil),
+			mockUserHelper.EXPECT().GetCommitAuthor(ctx, sha.String()).Return(user, nil),
 			mockIssueHelper.EXPECT().Assign(ctx, issues[0], approver).Return(nil),
 		)
 
@@ -878,12 +878,12 @@ reviewers:
 			Login: &userLogin,
 		}
 
-		sha, commit := test.AddEmptyCommit(t, repo, "empty")
+		sha, _ := test.AddEmptyCommit(t, repo, "empty")
 
 		gomock.InOrder(
 			mockIssueHelper.EXPECT().ListAllOpen(ctx, true).Return(issues, nil),
 			mockFinder.EXPECT().FindSHAs(body).Return([]plumbing.Hash{sha}, nil),
-			mockUserHelper.EXPECT().GetUser(ctx, commit).Return(user, nil),
+			mockUserHelper.EXPECT().GetCommitAuthor(ctx, sha.String()).Return(user, nil),
 			mockIssueHelper.EXPECT().Assign(ctx, issues[0], userLogin).Return(errors.New("error")),
 		)
 
@@ -966,12 +966,12 @@ reviewers:
 			Login: &userLogin,
 		}
 
-		sha, commit := test.AddEmptyCommit(t, repo, "empty")
+		sha, _ := test.AddEmptyCommit(t, repo, "empty")
 
 		gomock.InOrder(
 			mockIssueHelper.EXPECT().ListAllOpen(ctx, true).Return(issues, nil),
 			mockFinder.EXPECT().FindSHAs(body).Return([]plumbing.Hash{sha}, nil),
-			mockUserHelper.EXPECT().GetUser(ctx, commit).Return(user, nil),
+			mockUserHelper.EXPECT().GetCommitAuthor(ctx, sha.String()).Return(user, nil),
 			mockIssueHelper.EXPECT().Assign(ctx, issues[0], userLogin).Return(nil),
 		)
 

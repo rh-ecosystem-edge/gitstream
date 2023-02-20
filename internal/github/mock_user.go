@@ -8,7 +8,6 @@ import (
 	context "context"
 	reflect "reflect"
 
-	object "github.com/go-git/go-git/v5/plumbing/object"
 	gomock "github.com/golang/mock/gomock"
 	github "github.com/google/go-github/v47/github"
 )
@@ -36,17 +35,17 @@ func (m *MockUserHelper) EXPECT() *MockUserHelperMockRecorder {
 	return m.recorder
 }
 
-// GetUser mocks base method.
-func (m *MockUserHelper) GetUser(ctx context.Context, commit *object.Commit) (*github.User, error) {
+// GetCommitAuthor mocks base method.
+func (m *MockUserHelper) GetCommitAuthor(ctx context.Context, sha string) (*github.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUser", ctx, commit)
+	ret := m.ctrl.Call(m, "GetCommitAuthor", ctx, sha)
 	ret0, _ := ret[0].(*github.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetUser indicates an expected call of GetUser.
-func (mr *MockUserHelperMockRecorder) GetUser(ctx, commit interface{}) *gomock.Call {
+// GetCommitAuthor indicates an expected call of GetCommitAuthor.
+func (mr *MockUserHelperMockRecorder) GetCommitAuthor(ctx, sha interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockUserHelper)(nil).GetUser), ctx, commit)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommitAuthor", reflect.TypeOf((*MockUserHelper)(nil).GetCommitAuthor), ctx, sha)
 }

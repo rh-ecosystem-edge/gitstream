@@ -3,10 +3,10 @@ package github_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/go-github/v47/github"
 	"github.com/migueleliasweb/go-github-mock/src/mock"
 	gh "github.com/qbarrand/gitstream/internal/github"
@@ -16,32 +16,25 @@ import (
 func TestUserHelperImpl_GetUser(t *testing.T) {
 
 	const (
-		owner       = "owner"
-		repo        = "repo"
-		authorEmail = "suser@redhat.com"
+		owner     = "owner"
+		repo      = "repo"
+		commitSha = "some-sha"
 	)
 
 	var (
-		authorName  = "Some User"
 		authorLogin = "suser"
+		q           = fmt.Sprintf("hash:%s repo:%s/%s", commitSha, owner, repo)
 	)
 
 	ctx := context.Background()
-
-	commit := &object.Commit{
-		Author: object.Signature{
-			Name:  authorName,
-			Email: authorEmail,
-		},
-	}
 
 	t.Run("Github API error", func(t *testing.T) {
 
 		c := mock.NewMockedHTTPClient(
 			mock.WithRequestMatchHandler(
-				mock.GetSearchUsers,
+				mock.GetSearchCommits,
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					assert.Equal(t, authorEmail, r.URL.Query().Get("q"))
+					assert.Equal(t, q, r.URL.Query().Get("q"))
 					w.WriteHeader(http.StatusServiceUnavailable)
 				}),
 			),
@@ -49,26 +42,26 @@ func TestUserHelperImpl_GetUser(t *testing.T) {
 
 		gc := github.NewClient(c)
 
-		_, err := gh.NewUserHelper(gc, &gh.RepoName{Owner: owner, Repo: repo}).GetUser(ctx, commit)
+		_, err := gh.NewUserHelper(gc, &gh.RepoName{Owner: owner, Repo: repo}).GetCommitAuthor(ctx, commitSha)
 
 		assert.Error(t, err)
-		assert.ErrorContains(t, err, "failed to get user")
+		assert.ErrorContains(t, err, "failed to get commit")
 	})
 
-	t.Run("user not found", func(t *testing.T) {
+	t.Run("commit not found", func(t *testing.T) {
 
-		userSearchRes := &github.UsersSearchResult{
-			Users: []*github.User{},
+		commitsSearchRes := &github.CommitsSearchResult{
+			Commits: []*github.CommitResult{},
 		}
 
 		c := mock.NewMockedHTTPClient(
 			mock.WithRequestMatchHandler(
-				mock.GetSearchUsers,
+				mock.GetSearchCommits,
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					assert.Equal(t, authorEmail, r.URL.Query().Get("q"))
+					assert.Equal(t, q, r.URL.Query().Get("q"))
 					assert.NoError(
 						t,
-						json.NewEncoder(w).Encode(userSearchRes),
+						json.NewEncoder(w).Encode(commitsSearchRes),
 					)
 				}),
 			),
@@ -76,7 +69,7 @@ func TestUserHelperImpl_GetUser(t *testing.T) {
 
 		gc := github.NewClient(c)
 
-		_, err := gh.NewUserHelper(gc, &gh.RepoName{Owner: owner, Repo: repo}).GetUser(ctx, commit)
+		_, err := gh.NewUserHelper(gc, &gh.RepoName{Owner: owner, Repo: repo}).GetCommitAuthor(ctx, commitSha)
 
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, gh.ErrUnexpectedReply)
@@ -84,22 +77,24 @@ func TestUserHelperImpl_GetUser(t *testing.T) {
 
 	t.Run("working as expected", func(t *testing.T) {
 
-		userSearchRes := &github.UsersSearchResult{
-			Users: []*github.User{
+		commitsSearchRes := &github.CommitsSearchResult{
+			Commits: []*github.CommitResult{
 				{
-					Login: &authorLogin,
+					Author: &github.User{
+						Login: &authorLogin,
+					},
 				},
 			},
 		}
 
 		c := mock.NewMockedHTTPClient(
 			mock.WithRequestMatchHandler(
-				mock.GetSearchUsers,
+				mock.GetSearchCommits,
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					assert.Equal(t, authorEmail, r.URL.Query().Get("q"))
+					assert.Equal(t, q, r.URL.Query().Get("q"))
 					assert.NoError(
 						t,
-						json.NewEncoder(w).Encode(userSearchRes),
+						json.NewEncoder(w).Encode(commitsSearchRes),
 					)
 				}),
 			),
@@ -107,7 +102,7 @@ func TestUserHelperImpl_GetUser(t *testing.T) {
 
 		gc := github.NewClient(c)
 
-		user, err := gh.NewUserHelper(gc, &gh.RepoName{Owner: owner, Repo: repo}).GetUser(ctx, commit)
+		user, err := gh.NewUserHelper(gc, &gh.RepoName{Owner: owner, Repo: repo}).GetCommitAuthor(ctx, commitSha)
 
 		assert.NoError(t, err)
 		assert.Equal(t, *user.Login, authorLogin)
