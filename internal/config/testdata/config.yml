@@ -5,6 +5,7 @@ downstream:
   local_repo_path: some-path
   main_branch: some-branch
   max_open_items: 3
+  owners_file: some-dir/some-file
 
 log_level: 1000
 

@@ -17,6 +17,7 @@ func TestReadConfig(t *testing.T) {
 			LocalRepoPath: ".",
 			MainBranch:    "main",
 			MaxOpenItems:  -1,
+			OwnersFile:    "OWNERS",
 		},
 		Upstream: Upstream{Ref: "main"},
 	}
@@ -37,6 +38,7 @@ func TestReadConfigFile(t *testing.T) {
 			LocalRepoPath:  "some-path",
 			MainBranch:     "some-branch",
 			MaxOpenItems:   3,
+			OwnersFile:     "some-dir/some-file",
 		},
 		Diff: Diff{
 			CommitsSince: &since,
