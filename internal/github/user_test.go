@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUserHelperImpl_GetUser(t *testing.T) {
+func TestUserHelperImpl_GetCommitAuthor(t *testing.T) {
 
 	const (
 		owner     = "owner"
@@ -23,7 +23,7 @@ func TestUserHelperImpl_GetUser(t *testing.T) {
 
 	var (
 		authorLogin = "suser"
-		q           = fmt.Sprintf("hash:%s repo:%s/%s", commitSha, owner, repo)
+		q           = fmt.Sprintf("hash:%s+repo:%s/%s", commitSha, owner, repo)
 	)
 
 	ctx := context.Background()
