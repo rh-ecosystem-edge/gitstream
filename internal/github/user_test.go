@@ -50,7 +50,9 @@ func TestUserHelperImpl_GetCommitAuthor(t *testing.T) {
 
 	t.Run("commit not found", func(t *testing.T) {
 
+		commitsCount := 0
 		commitsSearchRes := &github.CommitsSearchResult{
+			Total:   &commitsCount,
 			Commits: []*github.CommitResult{},
 		}
 
@@ -72,12 +74,57 @@ func TestUserHelperImpl_GetCommitAuthor(t *testing.T) {
 		_, err := gh.NewUserHelper(gc, &gh.RepoName{Owner: owner, Repo: repo}).GetCommitAuthor(ctx, commitSha)
 
 		assert.Error(t, err)
+		assert.ErrorContains(t, err, "there are 0 commits matching the search query")
+		assert.ErrorIs(t, err, gh.ErrUnexpectedReply)
+	})
+
+	t.Run("more than 1 commit found", func(t *testing.T) {
+
+		commitsCount := 2
+		otherUserLogin := "some other user"
+		commitsSearchRes := &github.CommitsSearchResult{
+			Total: &commitsCount,
+			Commits: []*github.CommitResult{
+				{
+					Author: &github.User{
+						Login: &authorLogin,
+					},
+				},
+				{
+					Author: &github.User{
+						Login: &otherUserLogin,
+					},
+				},
+			},
+		}
+
+		c := mock.NewMockedHTTPClient(
+			mock.WithRequestMatchHandler(
+				mock.GetSearchCommits,
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					assert.Equal(t, q, r.URL.Query().Get("q"))
+					assert.NoError(
+						t,
+						json.NewEncoder(w).Encode(commitsSearchRes),
+					)
+				}),
+			),
+		)
+
+		gc := github.NewClient(c)
+
+		_, err := gh.NewUserHelper(gc, &gh.RepoName{Owner: owner, Repo: repo}).GetCommitAuthor(ctx, commitSha)
+
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "there are 2 commits matching the search query")
 		assert.ErrorIs(t, err, gh.ErrUnexpectedReply)
 	})
 
 	t.Run("working as expected", func(t *testing.T) {
 
+		commitsCount := 1
 		commitsSearchRes := &github.CommitsSearchResult{
+			Total: &commitsCount,
 			Commits: []*github.CommitResult{
 				{
 					Author: &github.User{
