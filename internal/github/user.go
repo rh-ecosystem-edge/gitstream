@@ -36,8 +36,8 @@ func (uh *UserHelperImpl) GetCommitAuthor(ctx context.Context, sha string) (*git
 	if err != nil {
 		return nil, fmt.Errorf("failed to get commit %s: %v", sha, err)
 	}
-	if len(commitSearchRes.Commits) != 1 {
-		return nil, ErrUnexpectedReply
+	if numCommits := *commitSearchRes.Total; numCommits != 1 {
+		return nil, fmt.Errorf("%w: there are %v commits matching the search query %q", ErrUnexpectedReply, numCommits, q)
 	}
 	return commitSearchRes.Commits[0].Author, nil
 }
