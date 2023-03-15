@@ -94,7 +94,7 @@ func (a *Assign) assignIssues(ctx context.Context) error {
 			if user, err := a.UserHelper.GetCommitAuthor(ctx, s.String()); err != nil {
 				if !errors.Is(err, gh.ErrUnexpectedReply) {
 					logger.Info("WARNING: failed to get a response from Github, skipping commit",
-						"issue", *issue.Number, "error", gh.ErrUnexpectedReply)
+						"issue", *issue.Number, "error", err.Error())
 					continue
 				}
 				logger.Info("WARNING: commit author for downstream issue not found on github, picking a random assignee",

@@ -34,7 +34,7 @@ func (uh *UserHelperImpl) GetCommitAuthor(ctx context.Context, sha string) (*git
 	q := fmt.Sprintf("hash:%s+repo:%s/%s", sha, uh.repoName.Owner, uh.repoName.Repo)
 	commitSearchRes, _, err := uh.gc.Search.Commits(ctx, q, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get commit %s: %v", sha, err)
+		return nil, fmt.Errorf("failed to get commit %s using query %q: %v", sha, q, err)
 	}
 	if numCommits := *commitSearchRes.Total; numCommits != 1 {
 		return nil, fmt.Errorf("%w: there are %v commits matching the search query %q", ErrUnexpectedReply, numCommits, q)
