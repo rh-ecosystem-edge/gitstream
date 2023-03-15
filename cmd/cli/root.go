@@ -320,6 +320,11 @@ func (a *App) assign(c *cli.Context) error {
 		return fmt.Errorf("%q: invalid repository name", a.Config.Downstream.GitHubRepoName)
 	}
 
+	upstreamRepoName, err := gh.ParseURL(a.Config.Upstream.URL)
+	if err != nil {
+		return fmt.Errorf("%q: invalid URL", a.Config.Upstream)
+	}
+
 	repo, err := git.PlainOpenWithOptions(a.Config.Downstream.LocalRepoPath, &git.PlainOpenOptions{})
 	if err != nil {
 		return fmt.Errorf("could not open the downstream repo: %v", err)
@@ -339,7 +344,7 @@ func (a *App) assign(c *cli.Context) error {
 		IssueHelper:      gh.NewIssueHelper(gc, a.Config.CommitMarkup, repoName),
 		UserHelper:       gh.NewUserHelper(gc, repoName),
 		Repo:             repo,
-		RepoName:         repoName,
+		RepoName:         upstreamRepoName,
 		UpstreamConfig:   a.Config.Upstream,
 		DownstreamConfig: a.Config.Downstream,
 		OwnersHelper:     owners.NewOwnersHelper(),
