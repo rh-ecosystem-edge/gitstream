@@ -3,8 +3,9 @@ package github_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"net/url"
+	"path"
 	"testing"
 
 	"github.com/google/go-github/v47/github"
@@ -16,17 +17,21 @@ import (
 func TestUserHelperImpl_GetCommitAuthor(t *testing.T) {
 
 	const (
-		owner     = "owner"
-		repo      = "repo"
+		owner     = "some-owner"
+		repo      = "some-repo"
 		commitSha = "some-sha"
 	)
 
 	var (
 		authorLogin = "suser"
-		q           = fmt.Sprintf("hash:%s+repo:%s/%s", commitSha, owner, repo)
 	)
 
 	ctx := context.Background()
+
+	q := url.Values{}
+	q.Add("hash", commitSha)
+	q.Add("repo", path.Join(owner, repo))
+	expectedQuery := q.Encode()
 
 	t.Run("Github API error", func(t *testing.T) {
 
@@ -34,7 +39,7 @@ func TestUserHelperImpl_GetCommitAuthor(t *testing.T) {
 			mock.WithRequestMatchHandler(
 				mock.GetSearchCommits,
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					assert.Equal(t, q, r.URL.Query().Get("q"))
+					assert.Equal(t, expectedQuery, r.URL.Query().Get("q"))
 					w.WriteHeader(http.StatusServiceUnavailable)
 				}),
 			),
@@ -60,7 +65,7 @@ func TestUserHelperImpl_GetCommitAuthor(t *testing.T) {
 			mock.WithRequestMatchHandler(
 				mock.GetSearchCommits,
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					assert.Equal(t, q, r.URL.Query().Get("q"))
+					assert.Equal(t, expectedQuery, r.URL.Query().Get("q"))
 					assert.NoError(
 						t,
 						json.NewEncoder(w).Encode(commitsSearchRes),
@@ -102,7 +107,7 @@ func TestUserHelperImpl_GetCommitAuthor(t *testing.T) {
 			mock.WithRequestMatchHandler(
 				mock.GetSearchCommits,
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					assert.Equal(t, q, r.URL.Query().Get("q"))
+					assert.Equal(t, expectedQuery, r.URL.Query().Get("q"))
 					assert.NoError(
 						t,
 						json.NewEncoder(w).Encode(commitsSearchRes),
@@ -138,7 +143,7 @@ func TestUserHelperImpl_GetCommitAuthor(t *testing.T) {
 			mock.WithRequestMatchHandler(
 				mock.GetSearchCommits,
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					assert.Equal(t, q, r.URL.Query().Get("q"))
+					assert.Equal(t, expectedQuery, r.URL.Query().Get("q"))
 					assert.NoError(
 						t,
 						json.NewEncoder(w).Encode(commitsSearchRes),
