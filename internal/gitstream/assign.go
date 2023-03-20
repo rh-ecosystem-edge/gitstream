@@ -2,13 +2,13 @@ package gitstream
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-logr/logr"
 	"github.com/google/go-github/v47/github"
+	"github.com/hashicorp/go-multierror"
 	"github.com/qbarrand/gitstream/internal"
 	"github.com/qbarrand/gitstream/internal/config"
 	gh "github.com/qbarrand/gitstream/internal/github"
@@ -50,6 +50,61 @@ func (a *Assign) Run(ctx context.Context) error {
 	return nil
 }
 
+func (a *Assign) filterApproversFromCommitAuthors(commitAuthors []string, owners *owners.Owners) []string {
+
+	filteredCommitAuthors := make([]string, 0, len(commitAuthors))
+	for _, ca := range commitAuthors {
+		if a.OwnersHelper.IsApprover(owners, ca) {
+			filteredCommitAuthors = append(filteredCommitAuthors, ca)
+		}
+	}
+
+	return filteredCommitAuthors
+}
+
+func (a *Assign) handleIssue(ctx context.Context, issue *github.Issue, owners *owners.Owners) error {
+
+	logger := a.Logger.WithValues("url", *issue.HTMLURL, "issue", *issue.Number)
+
+	if len(issue.Assignees) > 0 {
+		return nil
+	}
+
+	logger.Info("Processing issue")
+
+	shas, err := a.Finder.FindSHAs(*issue.Body)
+	if err != nil {
+		return fmt.Errorf("error while looking for SHAs in %q: %v", *issue.Body, err)
+	}
+
+	commitAuthors := make([]string, 0, len(shas))
+	for _, s := range shas {
+		user, err := a.UserHelper.GetCommitAuthor(ctx, s.String())
+		if err != nil {
+			return fmt.Errorf("failed to get commit author from GitHub for issue %d in commit %s: %v",
+				*issue.Number, s.String(), err)
+		}
+		commitAuthors = append(commitAuthors, *user.Login)
+	}
+
+	assignees := a.filterApproversFromCommitAuthors(commitAuthors, owners)
+
+	if len(assignees) == 0 {
+		logger.Info("None of the commit authors are approvers, picking a random approver")
+		randAssignee, err := a.OwnersHelper.GetRandomApprover(owners)
+		if err != nil {
+			return fmt.Errorf("could not get a random approver: %v", err)
+		}
+		assignees = append(assignees, randAssignee)
+	}
+
+	if err := a.IssueHelper.Assign(ctx, issue, assignees...); err != nil {
+		return fmt.Errorf("could not assign issue %d to %s: %v", *issue.Number, assignees, err)
+	}
+
+	return nil
+}
+
 func (a *Assign) assignIssues(ctx context.Context) error {
 
 	ownersFile := path.Join(a.DownstreamConfig.LocalRepoPath, a.DownstreamConfig.OwnersFile)
@@ -63,64 +118,12 @@ func (a *Assign) assignIssues(ctx context.Context) error {
 		return fmt.Errorf("could not list open issues: %v", err)
 	}
 
+	var multiErr error
 	for _, issue := range issues {
-
-		logger := a.Logger.WithValues("url", *issue.HTMLURL)
-
-		if len(issue.Assignees) > 0 {
-			continue
-		}
-
-		logger.Info("Processing issue")
-
-		shas, err := a.Finder.FindSHAs(*issue.Body)
-		if err != nil {
-			return fmt.Errorf("error while looking for SHAs in %q: %v", *issue.Body, err)
-		}
-
-		for _, s := range shas {
-
-			if a.DryRun {
-				logger.Info("Dry run: skipping issue update")
-				return nil
-			}
-
-			logger.Info("Assigning issue")
-
-			var (
-				assignee string
-				intErr   error
-			)
-			if user, err := a.UserHelper.GetCommitAuthor(ctx, s.String()); err != nil {
-				if !errors.Is(err, gh.ErrUnexpectedReply) {
-					logger.Info("WARNING: failed to get a response from Github, skipping commit",
-						"issue", *issue.Number, "error", err.Error())
-					continue
-				}
-				logger.Info("WARNING: commit author for downstream issue not found on github, picking a random assignee",
-					"issue", *issue.Number, "error", err.Error())
-				assignee, intErr = a.OwnersHelper.GetRandomApprover(owners)
-				if intErr != nil {
-					return fmt.Errorf("could not get a random owner: %v", err)
-				}
-			} else {
-				if a.OwnersHelper.IsApprover(owners, *user.Login) {
-					assignee = *user.Login
-				} else {
-					logger.Info("commit author for downstream issue is not an owner, picking a random assignee",
-						"issue", *issue.Number)
-					assignee, intErr = a.OwnersHelper.GetRandomApprover(owners)
-					if intErr != nil {
-						return fmt.Errorf("could not get a random owner: %v", err)
-					}
-				}
-			}
-
-			if err := a.IssueHelper.Assign(ctx, issue, assignee); err != nil {
-				return fmt.Errorf("could not assign issue %d: %v", *issue.Number, err)
-			}
+		if err := a.handleIssue(ctx, issue, owners); err != nil {
+			multiErr = multierror.Append(multiErr, err)
 		}
 	}
 
-	return nil
+	return multiErr
 }

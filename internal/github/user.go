@@ -2,7 +2,6 @@ package github
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 
@@ -28,8 +27,6 @@ func NewUserHelper(gc *github.Client, repoName *RepoName) UserHelper {
 	}
 }
 
-var ErrUnexpectedReply = errors.New("the number of found commits isn't exactly 1")
-
 func (uh *UserHelperImpl) GetCommitAuthor(ctx context.Context, sha string) (*github.User, error) {
 
 	q := url.Values{}
@@ -41,7 +38,7 @@ func (uh *UserHelperImpl) GetCommitAuthor(ctx context.Context, sha string) (*git
 		return nil, fmt.Errorf("failed to get commit %s using query %q: %v", sha, q, err)
 	}
 	if numCommits := *commitSearchRes.Total; numCommits != 1 {
-		return nil, fmt.Errorf("%w: there are %v commits matching the search query %q", ErrUnexpectedReply, numCommits, q)
+		return nil, fmt.Errorf("expected 1 commit in the search results for %q, got %d", q, numCommits)
 	}
 	return commitSearchRes.Commits[0].Author, nil
 }

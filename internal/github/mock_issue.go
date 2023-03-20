@@ -37,17 +37,22 @@ func (m *MockIssueHelper) EXPECT() *MockIssueHelperMockRecorder {
 }
 
 // Assign mocks base method.
-func (m *MockIssueHelper) Assign(ctx context.Context, issue *github.Issue, userLogin string) error {
+func (m *MockIssueHelper) Assign(ctx context.Context, issue *github.Issue, usersLogin ...string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Assign", ctx, issue, userLogin)
+	varargs := []interface{}{ctx, issue}
+	for _, a := range usersLogin {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Assign", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Assign indicates an expected call of Assign.
-func (mr *MockIssueHelperMockRecorder) Assign(ctx, issue, userLogin interface{}) *gomock.Call {
+func (mr *MockIssueHelperMockRecorder) Assign(ctx, issue interface{}, usersLogin ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Assign", reflect.TypeOf((*MockIssueHelper)(nil).Assign), ctx, issue, userLogin)
+	varargs := append([]interface{}{ctx, issue}, usersLogin...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Assign", reflect.TypeOf((*MockIssueHelper)(nil).Assign), varargs...)
 }
 
 // Create mocks base method.

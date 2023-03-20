@@ -15,7 +15,7 @@ import (
 type IssueHelper interface {
 	Create(ctx context.Context, err error, upstreamURL string, commit *object.Commit) (*github.Issue, error)
 	ListAllOpen(ctx context.Context, includePRs bool) ([]*github.Issue, error)
-	Assign(ctx context.Context, issue *github.Issue, userLogin string) error
+	Assign(ctx context.Context, issue *github.Issue, usersLogin ...string) error
 }
 
 type IssueHelperImpl struct {
@@ -104,10 +104,10 @@ func (ih *IssueHelperImpl) ListAllOpen(ctx context.Context, includePRs bool) ([]
 	return i, nil
 }
 
-func (ih *IssueHelperImpl) Assign(ctx context.Context, issue *github.Issue, userLogin string) error {
+func (ih *IssueHelperImpl) Assign(ctx context.Context, issue *github.Issue, usersLogin ...string) error {
 
-	if _, _, err := ih.gc.Issues.AddAssignees(ctx, ih.repoName.Owner, ih.repoName.Repo, *issue.Number, []string{userLogin}); err != nil {
-		return fmt.Errorf("couldn't assign user %s to issue %d: %v", userLogin, *issue.Number, err)
+	if _, _, err := ih.gc.Issues.AddAssignees(ctx, ih.repoName.Owner, ih.repoName.Repo, *issue.Number, usersLogin); err != nil {
+		return fmt.Errorf("failed to add assignees: %v", err)
 	}
 
 	return nil
