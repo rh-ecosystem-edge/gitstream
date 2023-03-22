@@ -184,10 +184,12 @@ func TestIssueHelper_Assign(t *testing.T) {
 		err := gh.NewIssueHelper(gc, "Markup", repoName).Assign(context.Background(), issue, username)
 
 		assert.Error(t, err)
-		assert.ErrorContains(t, err, "couldn't assign user")
+		assert.ErrorContains(t, err, "failed to add assignees")
 	})
 
 	t.Run("working as expected", func(t *testing.T) {
+
+		username2 := "test-user-2"
 
 		c := mock.NewMockedHTTPClient(
 			mock.WithRequestMatchHandler(
@@ -198,7 +200,7 @@ func TestIssueHelper_Assign(t *testing.T) {
 						t,
 						json.NewDecoder(r.Body).Decode(&m),
 					)
-					assert.Equal(t, []interface{}{username}, m["assignees"])
+					assert.Equal(t, []interface{}{username, username2}, m["assignees"])
 					assert.NoError(
 						t,
 						json.NewEncoder(w).Encode(issue),
@@ -209,7 +211,7 @@ func TestIssueHelper_Assign(t *testing.T) {
 
 		gc := github.NewClient(c)
 
-		err := gh.NewIssueHelper(gc, "Markup", repoName).Assign(context.Background(), issue, username)
+		err := gh.NewIssueHelper(gc, "Markup", repoName).Assign(context.Background(), issue, username, username2)
 
 		assert.NoError(t, err)
 	})

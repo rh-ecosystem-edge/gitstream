@@ -79,8 +79,8 @@ func TestUserHelperImpl_GetCommitAuthor(t *testing.T) {
 		_, err := gh.NewUserHelper(gc, &gh.RepoName{Owner: owner, Repo: repo}).GetCommitAuthor(ctx, commitSha)
 
 		assert.Error(t, err)
-		assert.ErrorContains(t, err, "there are 0 commits matching the search query")
-		assert.ErrorIs(t, err, gh.ErrUnexpectedReply)
+		assert.ErrorContains(t, err, "expected 1 commit in the search result")
+		assert.ErrorContains(t, err, "got 0")
 	})
 
 	t.Run("more than 1 commit found", func(t *testing.T) {
@@ -121,8 +121,8 @@ func TestUserHelperImpl_GetCommitAuthor(t *testing.T) {
 		_, err := gh.NewUserHelper(gc, &gh.RepoName{Owner: owner, Repo: repo}).GetCommitAuthor(ctx, commitSha)
 
 		assert.Error(t, err)
-		assert.ErrorContains(t, err, "there are 2 commits matching the search query")
-		assert.ErrorIs(t, err, gh.ErrUnexpectedReply)
+		assert.ErrorContains(t, err, "expected 1 commit in the search result")
+		assert.ErrorContains(t, err, "got 2")
 	})
 
 	t.Run("working as expected", func(t *testing.T) {
