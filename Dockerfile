@@ -1,4 +1,4 @@
-FROM golang:alpine3.16 as builder
+FROM golang:alpine as builder
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ COPY internal internal
 RUN ["apk", "add", "gcc", "musl-dev"]
 RUN ["go", "build", "-o", "gitstream"]
 
-FROM alpine:3.18.3
+FROM alpine
 
 RUN ["apk", "add", "ca-certificates"]
 
