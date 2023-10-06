@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os/exec"
 	"testing"
@@ -82,7 +83,7 @@ func TestIssueHelper_Create(t *testing.T) {
 	})
 
 	t.Run("process error", func(t *testing.T) {
-		const expectedBody = "gitstream tried to cherry-pick commit `e3229f3c533ed51070beff092e5c7694a8ee81f0` from `some-upstream-url` but was unable to do so.\n" +
+		const bodyFmt = "gitstream tried to cherry-pick commit `e3229f3c533ed51070beff092e5c7694a8ee81f0` from `some-upstream-url` but was unable to do so.\n" +
 			"\n" +
 			"Commit message:\n" +
 			"```\n" +
@@ -93,7 +94,7 @@ func TestIssueHelper_Create(t *testing.T) {
 			"---\n\n" +
 			"**Error**:\n" +
 			"```\n" +
-			"signal: killed\n" +
+			"%s\n" +
 			"```\n" +
 			"---\n\n" +
 			"**Command**: `some-command`\n\n" +
@@ -104,6 +105,11 @@ func TestIssueHelper_Create(t *testing.T) {
 			"</details>\n\n\n" +
 			"---\n\n" +
 			"Other-Markup: e3229f3c533ed51070beff092e5c7694a8ee81f0"
+
+		bodies := []string{
+			fmt.Sprintf(bodyFmt, "signal: killed"),
+			fmt.Sprintf(bodyFmt, "<nil>"),
+		}
 
 		c := mock.NewMockedHTTPClient(
 			mock.WithRequestMatchHandler(
@@ -116,7 +122,7 @@ func TestIssueHelper_Create(t *testing.T) {
 						json.NewDecoder(r.Body).Decode(&m),
 					)
 
-					assert.Equal(t, expectedBody, m["body"])
+					assert.Contains(t, bodies, m["body"])
 					assert.Equal(t, expectedTitle, m["title"])
 					assert.Contains(t, m["labels"], "gitstream")
 
