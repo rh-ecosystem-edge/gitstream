@@ -6,7 +6,7 @@ require (
 	github.com/cli/go-gh v1.2.1
 	github.com/creasty/defaults v1.7.0
 	github.com/go-git/go-billy/v5 v5.5.0
-	github.com/go-git/go-git/v5 v5.9.0
+	github.com/go-git/go-git/v5 v5.10.0
 	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/stdr v1.2.2
 	github.com/golang/mock v1.6.0
