@@ -12,7 +12,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v47 v47.1.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/migueleliasweb/go-github-mock v0.0.21
+	github.com/migueleliasweb/go-github-mock v0.0.22
 	github.com/shurcooL/githubv4 v0.0.0-20221229060216-a8d4a561cc93
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.25.7
@@ -62,6 +62,7 @@ require (
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/term v0.13.0 // indirect
+	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.13.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
