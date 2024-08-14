@@ -1,4 +1,4 @@
-module github.com/qbarrand/gitstream
+module github.com/rh-ecosystem-edge/gitstream
 
 go 1.21
 

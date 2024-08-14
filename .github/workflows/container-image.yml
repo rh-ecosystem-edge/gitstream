@@ -20,7 +20,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/qbarrand/gitstream
+          images: ghcr.io/rh-ecosystem-edge/gitstream
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}

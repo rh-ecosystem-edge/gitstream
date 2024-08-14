@@ -10,9 +10,9 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-logr/logr"
 	"github.com/google/go-github/v47/github"
-	"github.com/qbarrand/gitstream/internal"
-	gh "github.com/qbarrand/gitstream/internal/github"
-	"github.com/qbarrand/gitstream/internal/markup"
+	"github.com/rh-ecosystem-edge/gitstream/internal"
+	gh "github.com/rh-ecosystem-edge/gitstream/internal/github"
+	"github.com/rh-ecosystem-edge/gitstream/internal/markup"
 )
 
 type CommitIntents map[plumbing.Hash]string

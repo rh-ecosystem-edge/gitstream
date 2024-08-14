@@ -12,8 +12,8 @@ import (
 	git "github.com/go-git/go-git/v5"
 	object "github.com/go-git/go-git/v5/plumbing/object"
 	gomock "github.com/golang/mock/gomock"
-	config "github.com/qbarrand/gitstream/internal/config"
-	github "github.com/qbarrand/gitstream/internal/github"
+	config "github.com/rh-ecosystem-edge/gitstream/internal/config"
+	github "github.com/rh-ecosystem-edge/gitstream/internal/github"
 )
 
 // MockDiffer is a mock of Differ interface.

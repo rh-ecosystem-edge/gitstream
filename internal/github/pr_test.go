@@ -11,7 +11,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/go-github/v47/github"
 	"github.com/migueleliasweb/go-github-mock/src/mock"
-	gh "github.com/qbarrand/gitstream/internal/github"
+	gh "github.com/rh-ecosystem-edge/gitstream/internal/github"
 	"github.com/stretchr/testify/assert"
 )
 

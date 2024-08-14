@@ -9,7 +9,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-logr/logr"
-	"github.com/qbarrand/gitstream/internal/process"
+	"github.com/rh-ecosystem-edge/gitstream/internal/process"
 )
 
 //go:generate mockgen -source=cherrypick.go -package=gitutils -destination=mock_cherrypick.go

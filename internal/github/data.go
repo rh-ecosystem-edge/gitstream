@@ -3,7 +3,7 @@ package github
 import (
 	"errors"
 
-	"github.com/qbarrand/gitstream/internal/process"
+	"github.com/rh-ecosystem-edge/gitstream/internal/process"
 )
 
 type Commit struct {
