@@ -12,7 +12,7 @@ import (
 	v5 "github.com/go-git/go-git/v5"
 	plumbing "github.com/go-git/go-git/v5/plumbing"
 	gomock "github.com/golang/mock/gomock"
-	github "github.com/qbarrand/gitstream/internal/github"
+	github "github.com/rh-ecosystem-edge/gitstream/internal/github"
 )
 
 // MockGetter is a mock of Getter interface.

@@ -13,8 +13,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
-	"github.com/qbarrand/gitstream/internal/process"
-	"github.com/qbarrand/gitstream/internal/test"
+	"github.com/rh-ecosystem-edge/gitstream/internal/process"
+	"github.com/rh-ecosystem-edge/gitstream/internal/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

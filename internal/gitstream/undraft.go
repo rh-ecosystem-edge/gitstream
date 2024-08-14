@@ -8,11 +8,11 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-logr/logr"
 	"github.com/google/go-github/v47/github"
-	"github.com/qbarrand/gitstream/internal"
-	"github.com/qbarrand/gitstream/internal/config"
-	gh "github.com/qbarrand/gitstream/internal/github"
-	"github.com/qbarrand/gitstream/internal/gitutils"
-	"github.com/qbarrand/gitstream/internal/markup"
+	"github.com/rh-ecosystem-edge/gitstream/internal"
+	"github.com/rh-ecosystem-edge/gitstream/internal/config"
+	gh "github.com/rh-ecosystem-edge/gitstream/internal/github"
+	"github.com/rh-ecosystem-edge/gitstream/internal/gitutils"
+	"github.com/rh-ecosystem-edge/gitstream/internal/markup"
 )
 
 type Undraft struct {

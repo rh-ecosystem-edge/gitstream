@@ -10,11 +10,11 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-logr/logr"
-	"github.com/qbarrand/gitstream/internal"
-	"github.com/qbarrand/gitstream/internal/config"
-	gh "github.com/qbarrand/gitstream/internal/github"
-	"github.com/qbarrand/gitstream/internal/gitutils"
-	"github.com/qbarrand/gitstream/internal/process"
+	"github.com/rh-ecosystem-edge/gitstream/internal"
+	"github.com/rh-ecosystem-edge/gitstream/internal/config"
+	gh "github.com/rh-ecosystem-edge/gitstream/internal/github"
+	"github.com/rh-ecosystem-edge/gitstream/internal/gitutils"
+	"github.com/rh-ecosystem-edge/gitstream/internal/process"
 )
 
 type Sync struct {

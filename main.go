@@ -7,7 +7,7 @@ import (
 	"os/signal"
 
 	"github.com/go-logr/stdr"
-	"github.com/qbarrand/gitstream/cmd/cli"
+	"github.com/rh-ecosystem-edge/gitstream/cmd/cli"
 )
 
 func main() {

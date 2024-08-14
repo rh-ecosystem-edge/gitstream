@@ -9,7 +9,7 @@ import (
 	"github.com/cli/go-gh/pkg/api"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/go-github/v47/github"
-	"github.com/qbarrand/gitstream/internal"
+	"github.com/rh-ecosystem-edge/gitstream/internal"
 	"github.com/shurcooL/githubv4"
 )
 

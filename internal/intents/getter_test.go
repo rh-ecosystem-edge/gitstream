@@ -10,9 +10,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-github/v47/github"
 	"github.com/migueleliasweb/go-github-mock/src/mock"
-	gh "github.com/qbarrand/gitstream/internal/github"
-	"github.com/qbarrand/gitstream/internal/intents"
-	"github.com/qbarrand/gitstream/internal/markup"
+	gh "github.com/rh-ecosystem-edge/gitstream/internal/github"
+	"github.com/rh-ecosystem-edge/gitstream/internal/intents"
+	"github.com/rh-ecosystem-edge/gitstream/internal/markup"
 	"github.com/stretchr/testify/assert"
 )
 

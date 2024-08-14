@@ -9,8 +9,8 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-logr/logr"
-	"github.com/qbarrand/gitstream/internal"
-	"github.com/qbarrand/gitstream/internal/gitutils"
+	"github.com/rh-ecosystem-edge/gitstream/internal"
+	"github.com/rh-ecosystem-edge/gitstream/internal/gitutils"
 )
 
 type DeleteRemoteBranches struct {
