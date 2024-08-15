@@ -108,6 +108,7 @@ func TestExecutorImpl_RunCommand(t *testing.T) {
 				"_TEST_EXPECTED_COMMAND_LINE=" + commandLine,
 				"_TEST_OUTPUT=some-output",
 				"_TEST_RETCODE=" + strconv.Itoa(ret),
+				"GOCOVERDIR=.",
 			}
 
 			return cmd
