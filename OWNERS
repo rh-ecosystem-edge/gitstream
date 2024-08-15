@@ -3,7 +3,6 @@ approvers:
 - chr15p
 - enriquebelarte
 - mresvanis
-- TomerNewman
 - ybettan
 - yevgeny-shnaidman
 options: {}
@@ -12,6 +11,5 @@ reviewers:
 - chr15p
 - enriquebelarte
 - mresvanis
-- TomerNewman
 - ybettan
 - yevgeny-shnaidman
