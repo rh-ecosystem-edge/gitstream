@@ -6,7 +6,7 @@ toolchain go1.21.8
 
 require (
 	github.com/cli/go-gh v1.2.1
-	github.com/creasty/defaults v1.7.0
+	github.com/creasty/defaults v1.8.0
 	github.com/go-git/go-billy/v5 v5.5.0
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/go-logr/logr v1.4.2
