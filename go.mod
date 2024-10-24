@@ -1,8 +1,7 @@
 module github.com/rh-ecosystem-edge/gitstream
 
 go 1.21
-
-toolchain go1.21.8
+toolchain go1.23.2
 
 require (
 	github.com/cli/go-gh v1.2.1
@@ -14,7 +13,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v47 v47.1.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/migueleliasweb/go-github-mock v1.0.1
+	github.com/migueleliasweb/go-github-mock v1.1.0
 	github.com/shurcooL/githubv4 v0.0.0-20221229060216-a8d4a561cc93
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v2 v2.27.5
@@ -60,7 +59,7 @@ require (
 	golang.org/x/crypto v0.25.0 // indirect
 	golang.org/x/mod v0.19.0 // indirect
 	golang.org/x/net v0.27.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/term v0.22.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
