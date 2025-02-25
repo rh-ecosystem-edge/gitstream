@@ -1,7 +1,6 @@
 module github.com/rh-ecosystem-edge/gitstream
 
 go 1.23
-
 toolchain go1.23.2
 
 require (
@@ -19,7 +18,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v2 v2.27.5
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	golang.org/x/oauth2 v0.26.0
+	golang.org/x/oauth2 v0.27.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
