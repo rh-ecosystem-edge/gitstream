@@ -2,6 +2,7 @@ package github
 
 import (
 	"errors"
+	"os"
 
 	"github.com/rh-ecosystem-edge/gitstream/internal/process"
 )
@@ -14,6 +15,7 @@ type Commit struct {
 type BaseData struct {
 	AppName     string
 	Commit      Commit
+	JobID       string
 	Markup      string
 	UpstreamURL string
 }
@@ -34,3 +36,16 @@ func (is *IssueData) ProcessError() *process.Error {
 }
 
 type PRData BaseData
+
+// GetJobID returns the Job ID from environment variables.
+// It first tries GITHUB_RUN_ID (GitHub Actions), then falls back to JOB_ID (generic CI).
+// Returns empty string if no Job ID is found.
+func GetJobID() string {
+	if jobID, exists := os.LookupEnv("GITHUB_RUN_ID"); exists && jobID != "" {
+		return jobID
+	}
+	if jobID, exists := os.LookupEnv("JOB_ID"); exists && jobID != "" {
+		return jobID
+	}
+	return ""
+}
