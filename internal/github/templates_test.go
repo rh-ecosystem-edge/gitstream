@@ -98,4 +98,25 @@ func TestExecuteAssignmentCommentTemplate(t *testing.T) {
 		assert.NotContains(t, result, "Referenced commits")
 		assert.NotContains(t, result, "Commit authors")
 	})
+
+	t.Run("template properly handles PRs and issues", func(t *testing.T) {
+		// For PRs and issues with SHAs, it should say "issue"
+		// For other items without SHAs, it should say "item"
+		dataWithSHAs := &AssignmentCommentData{
+			AppName:              "gitstream",
+			CommitSHAs:           []string{"abc123"},
+			CommitAuthors:        []string{"user1"},
+			ApproverCommitAuthors: []string{"user1"},
+			AssignedUsers:        []string{"user1"},
+			AssignmentReason:     "they are the author of a referenced commit and an approver.",
+			IsRandomAssignment:   false,
+		}
+
+		var buf bytes.Buffer
+		err := ExecuteAssignmentCommentTemplate(&buf, dataWithSHAs)
+
+		assert.NoError(t, err)
+		result := buf.String()
+		assert.Contains(t, result, "I assigned this issue to **@user1**")
+	})
 }

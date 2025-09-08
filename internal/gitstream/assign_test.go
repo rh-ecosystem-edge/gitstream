@@ -389,6 +389,57 @@ func TestAssign_handleIssue(t *testing.T) {
 		err := a.handleIssue(ctx, issue, o)
 		assert.NoError(t, err)
 	})
+
+	t.Run("working as expected for PR", func(t *testing.T) {
+
+		var (
+			ctx         = context.Background()
+			issueNumber = 123
+			issueURL    = "some url"
+			body        = "some body"
+		)
+
+		ctrl := gomock.NewController(t)
+
+		mockFinder := markup.NewMockFinder(ctrl)
+		mockUserHelper := gh.NewMockUserHelper(ctrl)
+		mockOwnersHelper := owners.NewMockOwnersHelper(ctrl)
+		mockIssueHelper := gh.NewMockIssueHelper(ctrl)
+
+		a := Assign{
+			Finder:       mockFinder,
+			Logger:       logr.Discard(),
+			OwnersHelper: mockOwnersHelper,
+			UserHelper:   mockUserHelper,
+			IssueHelper:  mockIssueHelper,
+		}
+
+		// This is a PR (has PullRequestLinks)
+		prLinks := &github.PullRequestLinks{}
+		issue := &github.Issue{
+			Number:           &issueNumber,
+			HTMLURL:          &issueURL,
+			Body:             &body,
+			PullRequestLinks: prLinks, // This makes it a PR
+		}
+
+		repo := test.NewRepo(t)
+		sha, _ := test.AddEmptyCommit(t, repo, "empty")
+		user := &github.User{
+			Login: &o.Approvers[0],
+		}
+
+		gomock.InOrder(
+			mockFinder.EXPECT().FindSHAs(body).Return([]plumbing.Hash{sha}, nil),
+			mockUserHelper.EXPECT().GetCommitAuthor(ctx, sha.String()).Return(user, nil),
+			mockOwnersHelper.EXPECT().IsApprover(o, *user.Login).Return(true),
+			mockIssueHelper.EXPECT().Assign(ctx, issue, *user.Login).Return(nil),
+			mockIssueHelper.EXPECT().Comment(ctx, issue, gomock.Any()).Return(nil),
+		)
+
+		err := a.handleIssue(ctx, issue, o)
+		assert.NoError(t, err)
+	})
 }
 
 func TestAssign_assignIssues(t *testing.T) {
