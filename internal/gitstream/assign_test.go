@@ -333,6 +333,7 @@ func TestAssign_handleIssue(t *testing.T) {
 			mockUserHelper.EXPECT().GetCommitAuthor(ctx, sha.String()).Return(user, nil),
 			mockOwnersHelper.EXPECT().IsApprover(o, *user.Login).Return(true),
 			mockIssueHelper.EXPECT().Assign(ctx, issue, *user.Login).Return(nil),
+			mockIssueHelper.EXPECT().Comment(ctx, issue, gomock.Any()).Return(nil),
 		)
 
 		err := a.handleIssue(ctx, issue, o)
@@ -382,6 +383,7 @@ func TestAssign_handleIssue(t *testing.T) {
 			mockOwnersHelper.EXPECT().IsApprover(o, *user.Login).Return(false),
 			mockOwnersHelper.EXPECT().GetRandomApprover(o).Return(*user.Login, nil),
 			mockIssueHelper.EXPECT().Assign(ctx, issue, *user.Login).Return(nil),
+			mockIssueHelper.EXPECT().Comment(ctx, issue, gomock.Any()).Return(nil),
 		)
 
 		err := a.handleIssue(ctx, issue, o)
@@ -586,6 +588,7 @@ func TestAssign_assignIssues(t *testing.T) {
 			mockUserHelper.EXPECT().GetCommitAuthor(ctx, sha.String()).Return(user, nil),
 			mockOwnersHelper.EXPECT().IsApprover(o, *user.Login).Return(true),
 			mockIssueHelper.EXPECT().Assign(ctx, issues[1], o.Approvers[0]).Return(nil),
+			mockIssueHelper.EXPECT().Comment(ctx, issues[1], gomock.Any()).Return(nil),
 		)
 
 		err := a.assignIssues(ctx)
@@ -755,12 +758,14 @@ func TestAssign_assignIssues(t *testing.T) {
 			mockUserHelper.EXPECT().GetCommitAuthor(ctx, sha.String()).Return(user, nil),
 			mockOwnersHelper.EXPECT().IsApprover(o, *user.Login).Return(true),
 			mockIssueHelper.EXPECT().Assign(ctx, issues[0], o.Approvers[0]).Return(nil),
+			mockIssueHelper.EXPECT().Comment(ctx, issues[0], gomock.Any()).Return(nil),
 
 			// issue #2
 			mockFinder.EXPECT().FindSHAs(body).Return([]plumbing.Hash{sha}, nil),
 			mockUserHelper.EXPECT().GetCommitAuthor(ctx, sha.String()).Return(user, nil),
 			mockOwnersHelper.EXPECT().IsApprover(o, *user.Login).Return(true),
 			mockIssueHelper.EXPECT().Assign(ctx, issues[1], o.Approvers[0]).Return(nil),
+			mockIssueHelper.EXPECT().Comment(ctx, issues[1], gomock.Any()).Return(nil),
 		)
 
 		err := a.assignIssues(ctx)

@@ -1,0 +1,31 @@
+{{- /*gotype: github.com/rh-ecosystem-edge/gitstream/internal/github.AssignmentCommentData*/ -}}
+🤖 **{{ .AppName }} Assignment Explanation**
+
+{{- if .IsRandomAssignment }}
+
+I randomly assigned this {{ if .CommitSHAs }}issue{{ else }}item{{ end }} to **{{ range $i, $user := .AssignedUsers }}{{ if $i }}, {{ end }}@{{ $user }}{{ end }}** from the list of approvers.
+
+**Reason**: {{ .AssignmentReason }}
+
+{{- if .CommitSHAs }}
+**Referenced commits**: {{ range $i, $sha := .CommitSHAs }}{{ if $i }}, {{ end }}`{{ $sha }}`{{ end }}
+{{- if .CommitAuthors }}
+**Commit authors found**: {{ range $i, $author := .CommitAuthors }}{{ if $i }}, {{ end }}@{{ $author }}{{ end }}
+{{- end }}
+{{- end }}
+
+{{- else }}
+
+I assigned this {{ if .CommitSHAs }}issue{{ else }}item{{ end }} to **{{ range $i, $user := .AssignedUsers }}{{ if $i }}, {{ end }}@{{ $user }}{{ end }}** because {{ .AssignmentReason }}
+
+{{- if .CommitSHAs }}
+**Referenced commits**: {{ range $i, $sha := .CommitSHAs }}{{ if $i }}, {{ end }}`{{ $sha }}`{{ end }}
+{{- if .CommitAuthors }}
+**All commit authors**: {{ range $i, $author := .CommitAuthors }}{{ if $i }}, {{ end }}@{{ $author }}{{ end }}
+{{- end }}
+{{- if .ApproverCommitAuthors }}
+**Authors who are approvers**: {{ range $i, $author := .ApproverCommitAuthors }}{{ if $i }}, {{ end }}@{{ $author }}{{ end }}
+{{- end }}
+{{- end }}
+
+{{- end }}
