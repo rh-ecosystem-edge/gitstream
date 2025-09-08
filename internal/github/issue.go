@@ -42,6 +42,7 @@ func (ih *IssueHelperImpl) Create(ctx context.Context, err error, upstreamURL st
 				Message: commit.Message,
 				SHA:     sha,
 			},
+			JobID:       GetJobID(),
 			Markup:      ih.markup,
 			UpstreamURL: upstreamURL,
 		},
