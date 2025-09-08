@@ -34,3 +34,13 @@ func (is *IssueData) ProcessError() *process.Error {
 }
 
 type PRData BaseData
+
+type AssignmentCommentData struct {
+	AppName              string
+	CommitSHAs           []string
+	CommitAuthors        []string
+	ApproverCommitAuthors []string
+	AssignedUsers        []string
+	AssignmentReason     string
+	IsRandomAssignment   bool
+}
