@@ -1,8 +1,6 @@
 module github.com/rh-ecosystem-edge/gitstream
 
-go 1.24.0
-
-toolchain go1.24.1
+go 1.24.4
 
 require (
 	github.com/cli/go-gh v1.2.1
@@ -14,7 +12,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v47 v47.1.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/migueleliasweb/go-github-mock v1.3.0
+	github.com/migueleliasweb/go-github-mock v1.5.0
 	github.com/shurcooL/githubv4 v0.0.0-20221229060216-a8d4a561cc93
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v2 v2.27.7
@@ -36,9 +34,9 @@ require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
-	github.com/google/go-github/v71 v71.0.0 // indirect
+	github.com/google/go-github/v73 v73.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/gorilla/mux v1.8.0 // indirect
+	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/henvic/httpretty v0.0.6 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
@@ -61,6 +59,6 @@ require (
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/term v0.31.0 // indirect
-	golang.org/x/time v0.3.0 // indirect
+	golang.org/x/time v0.11.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
