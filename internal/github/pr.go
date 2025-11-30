@@ -48,6 +48,7 @@ func (ph *PRHelperImpl) Create(ctx context.Context, branch, base, upstreamURL st
 			Message: commit.Message,
 			SHA:     sha,
 		},
+		JobID:       GetJobID(),
 		Markup:      ph.markup,
 		UpstreamURL: upstreamURL,
 	}
