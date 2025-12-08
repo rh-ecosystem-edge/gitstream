@@ -5,7 +5,7 @@ go 1.24.4
 require (
 	github.com/cli/go-gh v1.2.1
 	github.com/creasty/defaults v1.8.0
-	github.com/go-git/go-billy/v5 v5.6.2
+	github.com/go-git/go-billy/v5 v5.7.0
 	github.com/go-git/go-git/v5 v5.16.4
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/stdr v1.2.2
