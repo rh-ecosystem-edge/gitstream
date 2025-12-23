@@ -222,3 +222,71 @@ func TestIssueHelper_Assign(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestIssueHelper_Comment(t *testing.T) {
+
+	const (
+		repoOwner = "owner"
+		repoName  = "repo"
+	)
+
+	var (
+		issueNumber = 123
+		commentBody = "This is a test comment"
+
+		issue = &github.Issue{
+			Number: &issueNumber,
+		}
+
+		ghRepoName = &gh.RepoName{
+			Owner: repoOwner,
+			Repo:  repoName,
+		}
+	)
+
+	t.Run("API error", func(t *testing.T) {
+		c := mock.NewMockedHTTPClient(
+			mock.WithRequestMatchHandler(
+				mock.PostReposIssuesCommentsByOwnerByRepoByIssueNumber,
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusInternalServerError)
+				}),
+			),
+		)
+
+		gc := github.NewClient(c)
+
+		err := gh.NewIssueHelper(gc, "Markup", ghRepoName).Comment(context.Background(), issue, commentBody)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to create comment")
+	})
+
+	t.Run("working as expected", func(t *testing.T) {
+		c := mock.NewMockedHTTPClient(
+			mock.WithRequestMatchHandler(
+				mock.PostReposIssuesCommentsByOwnerByRepoByIssueNumber,
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					m := make(map[string]interface{})
+					assert.NoError(
+						t,
+						json.NewDecoder(r.Body).Decode(&m),
+					)
+					assert.Equal(t, commentBody, m["body"])
+					w.WriteHeader(http.StatusCreated)
+					responseBody := commentBody
+					assert.NoError(
+						t,
+						json.NewEncoder(w).Encode(&github.IssueComment{Body: &responseBody}),
+					)
+				}),
+			),
+		)
+
+		gc := github.NewClient(c)
+
+		err := gh.NewIssueHelper(gc, "Markup", ghRepoName).Comment(context.Background(), issue, commentBody)
+
+		assert.NoError(t, err)
+	})
+}
