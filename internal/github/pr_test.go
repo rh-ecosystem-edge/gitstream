@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/go-git/go-git/v5/plumbing"
@@ -16,6 +17,14 @@ import (
 )
 
 func TestPRHelperImpl_Create(t *testing.T) {
+	// Clear any existing job ID environment variables for consistent testing
+	os.Unsetenv("GITHUB_RUN_ID")
+	os.Unsetenv("JOB_ID")
+	defer func() {
+		os.Unsetenv("GITHUB_RUN_ID")
+		os.Unsetenv("JOB_ID")
+	}()
+
 	const (
 		draft        = true
 		expectedBody = "This is an automated cherry-pick by gitstream of `e3229f3c533ed51070beff092e5c7694a8ee81f0` from `some-upstream-url`.\n\n" +
@@ -48,6 +57,94 @@ func TestPRHelperImpl_Create(t *testing.T) {
 				)
 
 				assert.Equal(t, expectedBody, m["body"])
+				assert.Equal(t, expectedTitle, m["title"])
+				assert.Equal(t, draft, m["draft"])
+
+				assert.NoError(
+					t,
+					json.NewEncoder(w).Encode(pr),
+				)
+			}),
+		),
+		mock.WithRequestMatchHandler(
+			mock.PostReposIssuesLabelsByOwnerByRepoByIssueNumber,
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				m := make([]string, 0)
+
+				assert.NoError(
+					t,
+					json.NewDecoder(r.Body).Decode(&m),
+				)
+
+				assert.Equal(
+					t,
+					fmt.Sprintf("/repos/%s/%s/issues/%d/labels", owner, repo, prNumber),
+					r.RequestURI,
+				)
+
+				assert.Equal(t, []string{"gitstream"}, m)
+			}),
+		),
+	)
+
+	gc := github.NewClient(c)
+
+	res, err := gh.NewPRHelper(gc, nil, "Markup", &gh.RepoName{Owner: owner, Repo: repo}).Create(
+		context.Background(),
+		"some-branch",
+		"main",
+		"some-upstream-url",
+		&object.Commit{
+			Hash:    plumbing.NewHash("e3229f3c533ed51070beff092e5c7694a8ee81f0"),
+			Message: "Some commit message\nspreading over two lines.",
+		},
+		draft,
+	)
+
+	assert.NoError(t, err)
+	assert.Equal(t, pr, res)
+}
+
+func TestPRHelperImpl_CreateWithJobID(t *testing.T) {
+	// Set job ID environment variable
+	testJobID := "test-job-123"
+	os.Setenv("GITHUB_RUN_ID", testJobID)
+	defer os.Unsetenv("GITHUB_RUN_ID")
+
+	const (
+		draft         = true
+		expectedTitle = "Cherry-pick `e3229f3c533ed51070beff092e5c7694a8ee81f0` from upstream"
+		owner         = "owner"
+		prNumber      = 456
+		repo          = "repo"
+	)
+
+	expectedBodyWithJobID := "This is an automated cherry-pick by gitstream of `e3229f3c533ed51070beff092e5c7694a8ee81f0` from `some-upstream-url`.\n\n" +
+		"**Job ID**: " + testJobID + "\n\n" +
+		"Commit message:\n" +
+		"```\n" +
+		"Some commit message\n" +
+		"spreading over two lines.\n" +
+		"```\n\n" +
+		"---\n\n" +
+		"Markup: e3229f3c533ed51070beff092e5c7694a8ee81f0"
+
+	pr := &github.PullRequest{
+		Number: github.Int(prNumber),
+	}
+
+	c := mock.NewMockedHTTPClient(
+		mock.WithRequestMatchHandler(
+			mock.PostReposPullsByOwnerByRepo,
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				m := make(map[string]interface{})
+
+				assert.NoError(
+					t,
+					json.NewDecoder(r.Body).Decode(&m),
+				)
+
+				assert.Equal(t, expectedBodyWithJobID, m["body"])
 				assert.Equal(t, expectedTitle, m["title"])
 				assert.Equal(t, draft, m["draft"])
 
