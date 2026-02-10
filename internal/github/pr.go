@@ -21,6 +21,7 @@ type PRHelper interface {
 	Create(ctx context.Context, branch, base, upstreamURL string, commit *object.Commit, draft bool) (*github.PullRequest, error)
 	ListAllOpen(ctx context.Context, filter PRFilterFunc) ([]*github.PullRequest, error)
 	MakeReady(ctx context.Context, pr *github.PullRequest) error
+	Comment(ctx context.Context, pr *github.PullRequest, comment string) error
 }
 
 type PRHelperImpl struct {
@@ -147,4 +148,16 @@ func PRHasLabel(pr *github.PullRequest, label string) bool {
 	}
 
 	return false
+}
+
+func (ph *PRHelperImpl) Comment(ctx context.Context, pr *github.PullRequest, comment string) error {
+	commentRequest := &github.IssueComment{
+		Body: github.String(comment),
+	}
+
+	if _, _, err := ph.gc.Issues.CreateComment(ctx, ph.repoName.Owner, ph.repoName.Repo, *pr.Number, commentRequest); err != nil {
+		return fmt.Errorf("failed to create comment: %v", err)
+	}
+
+	return nil
 }

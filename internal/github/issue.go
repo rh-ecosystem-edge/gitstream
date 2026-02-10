@@ -16,6 +16,7 @@ type IssueHelper interface {
 	Create(ctx context.Context, err error, upstreamURL string, commit *object.Commit) (*github.Issue, error)
 	ListAllOpen(ctx context.Context, includePRs bool) ([]*github.Issue, error)
 	Assign(ctx context.Context, issue *github.Issue, usersLogin ...string) error
+	Comment(ctx context.Context, issue *github.Issue, comment string) error
 }
 
 type IssueHelperImpl struct {
@@ -108,6 +109,18 @@ func (ih *IssueHelperImpl) Assign(ctx context.Context, issue *github.Issue, user
 
 	if _, _, err := ih.gc.Issues.AddAssignees(ctx, ih.repoName.Owner, ih.repoName.Repo, *issue.Number, usersLogin); err != nil {
 		return fmt.Errorf("failed to add assignees: %v", err)
+	}
+
+	return nil
+}
+
+func (ih *IssueHelperImpl) Comment(ctx context.Context, issue *github.Issue, comment string) error {
+	commentRequest := &github.IssueComment{
+		Body: github.String(comment),
+	}
+
+	if _, _, err := ih.gc.Issues.CreateComment(ctx, ih.repoName.Owner, ih.repoName.Repo, *issue.Number, commentRequest); err != nil {
+		return fmt.Errorf("failed to create comment: %v", err)
 	}
 
 	return nil

@@ -95,3 +95,54 @@ func TestPRHelperImpl_Create(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, pr, res)
 }
+
+func TestPRHelperImpl_Comment(t *testing.T) {
+	const (
+		owner         = "owner"
+		repo          = "repo"
+		prNumber      = 123
+		commentBody   = "This is a test comment"
+	)
+
+	pr := &github.PullRequest{
+		Number: github.Int(prNumber),
+	}
+
+	c := mock.NewMockedHTTPClient(
+		mock.WithRequestMatchHandler(
+			mock.PostReposIssuesCommentsByOwnerByRepoByIssueNumber,
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				m := make(map[string]interface{})
+
+				assert.NoError(
+					t,
+					json.NewDecoder(r.Body).Decode(&m),
+				)
+
+				assert.Equal(t, commentBody, m["body"])
+				assert.Equal(
+					t,
+					fmt.Sprintf("/repos/%s/%s/issues/%d/comments", owner, repo, prNumber),
+					r.RequestURI,
+				)
+
+				comment := &github.IssueComment{
+					ID:   github.Int64(1),
+					Body: github.String(commentBody),
+				}
+
+				assert.NoError(
+					t,
+					json.NewEncoder(w).Encode(comment),
+				)
+			}),
+		),
+	)
+
+	gc := github.NewClient(c)
+	prHelper := gh.NewPRHelper(gc, nil, "Markup", &gh.RepoName{Owner: owner, Repo: repo})
+
+	err := prHelper.Comment(context.Background(), pr, commentBody)
+
+	assert.NoError(t, err)
+}
