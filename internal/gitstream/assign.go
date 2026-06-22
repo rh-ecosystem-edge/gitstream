@@ -1,6 +1,7 @@
 package gitstream
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"path"
@@ -77,6 +78,12 @@ func (a *Assign) handleIssue(ctx context.Context, issue *github.Issue, owners *o
 		return fmt.Errorf("error while looking for SHAs in %q: %v", *issue.Body, err)
 	}
 
+	// Convert SHAs to strings for the comment
+	shaStrings := make([]string, len(shas))
+	for i, s := range shas {
+		shaStrings[i] = s.String()
+	}
+
 	commitAuthors := make([]string, 0, len(shas))
 	for _, s := range shas {
 		user, err := a.UserHelper.GetCommitAuthor(ctx, s.String())
@@ -87,7 +94,11 @@ func (a *Assign) handleIssue(ctx context.Context, issue *github.Issue, owners *o
 		commitAuthors = append(commitAuthors, *user.Login)
 	}
 
-	assignees := a.filterApproversFromCommitAuthors(commitAuthors, owners)
+	approverCommitAuthors := a.filterApproversFromCommitAuthors(commitAuthors, owners)
+	assignees := approverCommitAuthors
+
+	var isRandomAssignment bool
+	var assignmentReason string
 
 	if len(assignees) == 0 {
 		logger.Info("None of the commit authors are approvers, picking a random approver")
@@ -96,10 +107,37 @@ func (a *Assign) handleIssue(ctx context.Context, issue *github.Issue, owners *o
 			return fmt.Errorf("could not get a random approver: %v", err)
 		}
 		assignees = append(assignees, randAssignee)
+		isRandomAssignment = true
+		assignmentReason = "none of the commit authors are approvers in the OWNERS file."
+	} else {
+		isRandomAssignment = false
+		if len(approverCommitAuthors) == 1 {
+			assignmentReason = "they are the author of a referenced commit and an approver."
+		} else {
+			assignmentReason = "they are authors of referenced commits and approvers."
+		}
 	}
 
 	if err := a.IssueHelper.Assign(ctx, issue, assignees...); err != nil {
 		return fmt.Errorf("could not assign issue %d to %s: %v", *issue.Number, assignees, err)
+	}
+
+	// Create assignment comment if not in dry run mode
+	if !a.DryRun {
+		commentData := gh.AssignmentCommentData{
+			AppName:               internal.AppName,
+			CommitSHAs:            shaStrings,
+			CommitAuthors:         commitAuthors,
+			ApproverCommitAuthors: approverCommitAuthors,
+			AssignedUsers:         assignees,
+			AssignmentReason:      assignmentReason,
+			IsRandomAssignment:    isRandomAssignment,
+		}
+
+		if err := a.createAssignmentComment(ctx, issue, &commentData); err != nil {
+			// Log the error but don't fail the assignment
+			logger.Error(err, "Failed to create assignment comment")
+		}
 	}
 
 	return nil
@@ -126,4 +164,18 @@ func (a *Assign) assignIssues(ctx context.Context) error {
 	}
 
 	return multiErr
+}
+
+func (a *Assign) createAssignmentComment(ctx context.Context, issue *github.Issue, data *gh.AssignmentCommentData) error {
+	var buf bytes.Buffer
+
+	if err := gh.ExecuteAssignmentCommentTemplate(&buf, data); err != nil {
+		return fmt.Errorf("could not execute assignment comment template: %v", err)
+	}
+
+	if err := a.IssueHelper.Comment(ctx, issue, buf.String()); err != nil {
+		return fmt.Errorf("could not create assignment comment: %v", err)
+	}
+
+	return nil
 }

@@ -55,6 +55,20 @@ func (mr *MockIssueHelperMockRecorder) Assign(ctx, issue interface{}, usersLogin
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Assign", reflect.TypeOf((*MockIssueHelper)(nil).Assign), varargs...)
 }
 
+// Comment mocks base method.
+func (m *MockIssueHelper) Comment(ctx context.Context, issue *github.Issue, comment string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Comment", ctx, issue, comment)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Comment indicates an expected call of Comment.
+func (mr *MockIssueHelperMockRecorder) Comment(ctx, issue, comment interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Comment", reflect.TypeOf((*MockIssueHelper)(nil).Comment), ctx, issue, comment)
+}
+
 // Create mocks base method.
 func (m *MockIssueHelper) Create(ctx context.Context, err error, upstreamURL string, commit *object.Commit) (*github.Issue, error) {
 	m.ctrl.T.Helper()
