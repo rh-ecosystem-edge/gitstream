@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"testing"
 
@@ -20,6 +21,14 @@ import (
 )
 
 func TestIssueHelper_Create(t *testing.T) {
+	// Clear any existing job ID environment variables for consistent testing
+	os.Unsetenv("GITHUB_RUN_ID")
+	os.Unsetenv("JOB_ID")
+	defer func() {
+		os.Unsetenv("GITHUB_RUN_ID")
+		os.Unsetenv("JOB_ID")
+	}()
+
 	const expectedTitle = "Cherry-picking error for `e3229f3c533ed51070beff092e5c7694a8ee81f0`"
 
 	issue := &github.Issue{Number: github.Int(456)}
@@ -152,6 +161,76 @@ func TestIssueHelper_Create(t *testing.T) {
 		res, err := gh.NewIssueHelper(gc, "Other-Markup", repoName).Create(
 			context.Background(),
 			process.NewError(ee, []byte("some output"), "some-command"),
+			"some-upstream-url",
+			commit,
+		)
+
+		assert.NoError(t, err)
+		assert.Equal(t, issue, res)
+	})
+}
+
+func TestIssueHelper_CreateWithJobID(t *testing.T) {
+	// Set job ID environment variable
+	testJobID := "test-job-123"
+	os.Setenv("GITHUB_RUN_ID", testJobID)
+	defer os.Unsetenv("GITHUB_RUN_ID")
+
+	const expectedTitle = "Cherry-picking error for `e3229f3c533ed51070beff092e5c7694a8ee81f0`"
+
+	issue := &github.Issue{Number: github.Int(456)}
+	repoName := &gh.RepoName{Owner: "owner", Repo: "repo"}
+
+	commit := &object.Commit{
+		Hash:    plumbing.NewHash("e3229f3c533ed51070beff092e5c7694a8ee81f0"),
+		Message: "Some commit message\nspanning over two lines.",
+	}
+
+	t.Run("regular error with job ID", func(t *testing.T) {
+		expectedBodyWithJobID := "gitstream tried to cherry-pick commit `e3229f3c533ed51070beff092e5c7694a8ee81f0` from `some-upstream-url` but was unable to do so.\n" +
+			"\n" +
+			"**Job ID**: " + testJobID + "\n\n" +
+			"Commit message:\n" +
+			"```\n" +
+			"Some commit message\n" +
+			"spanning over two lines.\n" +
+			"```\n\n" +
+			"Please cherry-pick the commit manually.\n\n" +
+			"---\n\n" +
+			"**Error**:\n" +
+			"```\n" +
+			"random error\n" +
+			"```\n\n\n" +
+			"---\n\n" +
+			"Markup: e3229f3c533ed51070beff092e5c7694a8ee81f0"
+
+		c := mock.NewMockedHTTPClient(
+			mock.WithRequestMatchHandler(
+				mock.PostReposIssuesByOwnerByRepo,
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					m := make(map[string]interface{})
+
+					assert.NoError(
+						t,
+						json.NewDecoder(r.Body).Decode(&m),
+					)
+
+					assert.Equal(t, expectedBodyWithJobID, m["body"])
+					assert.Equal(t, expectedTitle, m["title"])
+					assert.Contains(t, m["labels"], "gitstream")
+					assert.NoError(
+						t,
+						json.NewEncoder(w).Encode(issue),
+					)
+				}),
+			),
+		)
+
+		gc := github.NewClient(c)
+
+		res, err := gh.NewIssueHelper(gc, "Markup", repoName).Create(
+			context.Background(),
+			errors.New("random error"),
 			"some-upstream-url",
 			commit,
 		)

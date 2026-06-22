@@ -1,5 +1,9 @@
 {{- /*gotype: github.com/rh-ecosystem-edge/gitstream/internal/github.PRData*/ -}}
 This is an automated cherry-pick by {{ .AppName }} of `{{ .Commit.SHA }}` from `{{ .UpstreamURL }}`.
+{{- if .JobID }}
+
+**Job ID**: {{ .JobID }}
+{{- end }}
 
 Commit message:
 ```
