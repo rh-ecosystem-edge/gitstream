@@ -161,6 +161,40 @@ func TestIssueHelper_Create(t *testing.T) {
 	})
 }
 
+func TestIssueHelper_ListAllOpen(t *testing.T) {
+	repoName := &gh.RepoName{Owner: "owner", Repo: "repo"}
+	const cursor = "cursor1"
+
+	t.Run("listing spans two pages using after cursor", func(t *testing.T) {
+		page1 := &github.Issue{Number: github.Int(1942), HTMLURL: github.String("https://github.com/owner/repo/issues/1942")}
+		page2 := &github.Issue{Number: github.Int(1724), HTMLURL: github.String("https://github.com/owner/repo/issues/1724")}
+
+		c := mock.NewMockedHTTPClient(
+			mock.WithRequestMatchHandler(
+				mock.GetReposIssuesByOwnerByRepo,
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					assert.Equal(t, "open", r.URL.Query().Get("state"))
+					assert.Equal(t, "gitstream", r.URL.Query().Get("labels"))
+
+					after := r.URL.Query().Get("after")
+					if after == "" {
+						w.Header().Set("Link", `<https://api.github.com/repos/owner/repo/issues?after=`+cursor+`>; rel="next"`)
+						assert.NoError(t, json.NewEncoder(w).Encode([]*github.Issue{page1}))
+						return
+					}
+
+					assert.Equal(t, cursor, after)
+					assert.NoError(t, json.NewEncoder(w).Encode([]*github.Issue{page2}))
+				}),
+			),
+		)
+
+		issues, err := gh.NewIssueHelper(github.NewClient(c), "Upstream-Commit", repoName).ListAllOpen(context.Background(), true)
+		assert.NoError(t, err)
+		assert.Equal(t, []*github.Issue{page1, page2}, issues)
+	})
+}
+
 func TestIssueHelper_Assign(t *testing.T) {
 
 	issue := &github.Issue{Number: github.Int(456)}

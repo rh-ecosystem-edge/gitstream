@@ -60,8 +60,9 @@ func (g *GetterImpl) FromGitHubIssues(ctx context.Context, rn *gh.RepoName) (Com
 		State:  "all",
 	}
 
+	after := ""
 	for {
-		issues, resp, err := g.gc.Issues.ListByRepo(ctx, rn.Owner, rn.Repo, opt)
+		issues, resp, err := gh.ListRepoIssues(ctx, g.gc, rn.Owner, rn.Repo, opt, after)
 		if err != nil {
 			return nil, fmt.Errorf("error while listing issues: %v", err)
 		}
@@ -88,11 +89,12 @@ func (g *GetterImpl) FromGitHubIssues(ctx context.Context, rn *gh.RepoName) (Com
 			}
 		}
 
-		if resp.NextPage == 0 {
+		if resp.NextPage == 0 && resp.After == "" {
 			break
 		}
 
 		opt.Page = resp.NextPage
+		after = resp.After
 	}
 
 	return intents, nil
