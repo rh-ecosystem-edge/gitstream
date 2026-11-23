@@ -2,6 +2,7 @@ package intents_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -89,6 +90,60 @@ func TestGetterImpl_FromGitHubIssues(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, intents.CommitIntents{hash: issueURL1}, ci)
 
+	})
+
+	t.Run("GitHub listing spans two pages using after cursor", func(t *testing.T) {
+		const (
+			hashStr   = "b96d57a0ca2a53abc15988a23f32531147b9b9bb"
+			issueURL0 = "https://github.com/owner/repo/issues/1942"
+			issueURL1 = "https://github.com/owner/repo/issues/1724"
+			msg0      = "recent issue"
+			msg1      = "old issue with trailer"
+			cursor    = "cursor1"
+		)
+
+		repoName := gh.RepoName{Owner: "owner", Repo: "repo"}
+
+		mockedHTTPClient := mock.NewMockedHTTPClient(
+			mock.WithRequestMatchHandler(
+				mock.GetReposIssuesByOwnerByRepo,
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					after := r.URL.Query().Get("after")
+					if after == "" {
+						w.Header().Set("Link", `<https://api.github.com/repos/owner/repo/issues?after=`+cursor+`>; rel="next"`)
+						assert.NoError(t, json.NewEncoder(w).Encode([]*github.Issue{
+							{
+								Body:    github.String(msg0),
+								HTMLURL: github.String(issueURL0),
+							},
+						}))
+						return
+					}
+
+					assert.Equal(t, cursor, after)
+					assert.NoError(t, json.NewEncoder(w).Encode([]*github.Issue{
+						{
+							Body:    github.String(msg1),
+							HTMLURL: github.String(issueURL1),
+						},
+					}))
+				}),
+			),
+		)
+
+		c := github.NewClient(mockedHTTPClient)
+		ctrl := gomock.NewController(t)
+		finder := markup.NewMockFinder(ctrl)
+		hash := plumbing.NewHash(hashStr)
+
+		gomock.InOrder(
+			finder.EXPECT().FindSHAs(msg0).Return(nil, nil),
+			finder.EXPECT().FindSHAs(msg1).Return([]plumbing.Hash{hash}, nil),
+		)
+
+		ci, err := intents.NewIntentsGetter(finder, c, logr.Discard()).FromGitHubIssues(context.Background(), &repoName)
+		assert.NoError(t, err)
+		assert.Equal(t, intents.CommitIntents{hash: issueURL1}, ci)
 	})
 }
 

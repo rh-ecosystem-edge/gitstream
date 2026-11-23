@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/url"
+	"strconv"
+	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/go-github/v47/github"
@@ -75,13 +78,14 @@ func (ih *IssueHelperImpl) Create(ctx context.Context, err error, upstreamURL st
 func (ih *IssueHelperImpl) ListAllOpen(ctx context.Context, includePRs bool) ([]*github.Issue, error) {
 	i := make([]*github.Issue, 0)
 
-	opts := &github.IssueListByRepoOptions{
+	opt := &github.IssueListByRepoOptions{
 		Labels: []string{internal.GitStreamLabel},
 		State:  "open",
 	}
 
+	after := ""
 	for {
-		issues, res, err := ih.gc.Issues.ListByRepo(ctx, ih.repoName.Owner, ih.repoName.Repo, opts)
+		issues, res, err := ListRepoIssues(ctx, ih.gc, ih.repoName.Owner, ih.repoName.Repo, opt, after)
 		if err != nil {
 			return nil, fmt.Errorf("could not list issues: %v", err)
 		}
@@ -94,14 +98,55 @@ func (ih *IssueHelperImpl) ListAllOpen(ctx context.Context, includePRs bool) ([]
 			i = append(i, issue)
 		}
 
-		if res.NextPage == 0 {
+		if res.NextPage == 0 && res.After == "" {
 			break
 		}
 
-		opts.Page = res.NextPage
+		opt.Page = res.NextPage
+		after = res.After
 	}
 
 	return i, nil
+}
+
+// ListRepoIssues is Issues.ListByRepo plus after=. go-github v47 cannot set After on IssueListByRepoOptions.
+func ListRepoIssues(ctx context.Context, gc *github.Client, owner, repo string, opt *github.IssueListByRepoOptions, after string) ([]*github.Issue, *github.Response, error) {
+	u := fmt.Sprintf("repos/%s/%s/issues", owner, repo)
+
+	q := url.Values{}
+	if opt != nil {
+		if opt.State != "" {
+			q.Set("state", opt.State)
+		}
+		if len(opt.Labels) > 0 {
+			q.Set("labels", strings.Join(opt.Labels, ","))
+		}
+		if opt.Page > 0 {
+			q.Set("page", strconv.Itoa(opt.Page))
+		}
+		if opt.PerPage > 0 {
+			q.Set("per_page", strconv.Itoa(opt.PerPage))
+		}
+	}
+	if after != "" {
+		q.Set("after", after)
+	}
+	if encoded := q.Encode(); encoded != "" {
+		u += "?" + encoded
+	}
+
+	req, err := gc.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var issues []*github.Issue
+	resp, err := gc.Do(ctx, req, &issues)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return issues, resp, nil
 }
 
 func (ih *IssueHelperImpl) Assign(ctx context.Context, issue *github.Issue, usersLogin ...string) error {
